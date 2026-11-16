@@ -62,7 +62,11 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
     // Keep the Engine and scene across recompositions.
-    val filamentHost = remember { FilamentHost(context) { engine -> ToyRoomScene(engine) } }
+    val filamentHost = remember {
+        FilamentHost(context) { engine ->
+            ToyRoomScene(engine, context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH))
+        }
+    }
 
     // Released together with the remembered host, so a destroyed host is never reused.
     DisposableEffect(filamentHost) { onDispose { filamentHost.destroy() } }
