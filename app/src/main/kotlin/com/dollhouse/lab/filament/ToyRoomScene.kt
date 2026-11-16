@@ -5,6 +5,7 @@ import com.google.android.filament.Colors
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.Material
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
 import com.google.android.filament.Viewport
@@ -14,10 +15,7 @@ import java.nio.ByteBuffer
  * Sets up the room's scene, camera and background. FilamentHost handles drawing frames. The Engine
  * comes from outside and is not ours to destroy.
  */
-class ToyRoomScene(
-    private val engine: Engine,
-    materialData: ByteBuffer,
-) : FilamentContent {
+class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : FilamentContent {
     // Holds objects, lights and the background. For now, only the background is set.
     private val scene = engine.createScene()
 
@@ -31,15 +29,21 @@ class ToyRoomScene(
     private val skybox = Skybox.Builder().color(0.21f, 0.64f, 0.49f, 1f).build(engine)
 
     // The compiled material shared by objects with the same surface model.
-    private val material = Material.Builder()
-        .payload(materialData, materialData.remaining())
-        .build(engine)
+    private val material =
+        Material.Builder().payload(materialData, materialData.remaining()).build(engine)
 
-    // One set of surface values. Not attached to any object yet.
-    private val materialInstance = material.createInstance().apply {
-        setParameter(ColorRoughnessLit.BASE_COLOR, Colors.RgbType.SRGB, 0.85f, 0.25f, 0.15f)
-        setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
-    }
+    // Surface values used by the cube
+    private val materialInstance =
+        material.createInstance().apply {
+            setParameter(ColorRoughnessLit.BASE_COLOR, Colors.RgbType.SRGB, 0.85f, 0.25f, 0.15f)
+            setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
+        }
+
+    // Shared cube geometry
+    private val boxMesh = BoxMesh(engine)
+
+    // ID of the object that uses the geometry and material
+    private val cubeEntity = EntityManager.get().create()
 
     // Connects the scene, camera and drawing area. This is a Filament View, not an Android View.
     override val view: View = engine.createView()
@@ -50,6 +54,20 @@ class ToyRoomScene(
         view.camera = camera
         // Look from slightly above and in front of the room center, with +Y up.
         camera.lookAt(0.0, 1.5, 4.0, 0.0, 0.5, 0.0, 0.0, 1.0, 0.0)
+
+        // One renderable primitive with its geometry and material
+        RenderableManager.Builder(1)
+            .boundingBox(boxMesh.boundingBox)
+            .geometry(
+                0,
+                RenderableManager.PrimitiveType.TRIANGLES,
+                boxMesh.vertexBuffer,
+                boxMesh.indexBuffer,
+            )
+            .material(0, materialInstance)
+            .build(engine, cubeEntity)
+
+        scene.addEntity(cubeEntity)
     }
 
     /** Updates the drawing area when the surface changes size. Width and height are in pixels. */
@@ -66,6 +84,11 @@ class ToyRoomScene(
     override fun destroy() {
         // Native resources need explicit cleanup. Release the View before the objects it uses.
         engine.destroyView(view)
+        // Release the object before its material and geometry
+        engine.destroyEntity(cubeEntity)
+        EntityManager.get().destroy(cubeEntity)
+
+        boxMesh.destroy(engine)
         engine.destroyScene(scene)
         engine.destroyMaterialInstance(materialInstance)
         engine.destroyMaterial(material)
