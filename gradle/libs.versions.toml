@@ -6,6 +6,7 @@ androidxActivity = "1.13.0"
 androidxComposeBom = "2026.03.01"
 spotless = "7.2.1"
 ktfmt = "0.61"
+filament = "1.80.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -15,6 +16,7 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+filament-android = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
 
 
 [plugins]
