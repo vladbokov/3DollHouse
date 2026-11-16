@@ -1,7 +1,7 @@
 package com.dollhouse.lab.filament
 
+import android.opengl.Matrix
 import com.google.android.filament.Camera
-import com.google.android.filament.Colors
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.IndirectLight
@@ -19,7 +19,7 @@ import kotlin.math.sqrt
  * Engine comes from outside and is not ours to destroy.
  */
 class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : FilamentContent {
-    // Holds the cube, lights and background
+    // Holds the room boxes, lights and background
     private val scene = engine.createScene()
 
     // An entity is an ID. The camera component is attached to it below.
@@ -35,18 +35,18 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
     private val material =
         Material.Builder().payload(materialData, materialData.remaining()).build(engine)
 
-    // Surface values used by the cube
-    private val materialInstance =
+    // Surface values of the floor
+    private val floorMaterial =
         material.createInstance().apply {
-            setParameter(ColorRoughnessLit.BASE_COLOR, Colors.RgbType.SRGB, 0.85f, 0.25f, 0.15f)
+            setBaseColor(ToyRoom.floor.color)
             setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
         }
 
-    // Shared cube geometry
+    // Unit cube geometry, scaled into each room box
     private val boxMesh = BoxMesh(engine)
 
-    // ID of the object that uses the geometry and material
-    private val cubeEntity = EntityManager.get().create()
+    // ID of the floor object
+    private val floorEntity = EntityManager.get().create()
 
     // Entity carrying the directional light component
     private val sunEntity = EntityManager.get().create()
@@ -66,8 +66,8 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
         scene.indirectLight = ambientLight
         view.scene = scene
         view.camera = camera
-        // Look from slightly above and in front of the room center, with +Y up.
-        camera.lookAt(0.0, 1.5, 4.0, 0.0, 0.5, 0.0, 0.0, 1.0, 0.0)
+        // Look down at the floor center from above and outside the room
+        camera.lookAt(eye = CAMERA_EYE, target = CAMERA_TARGET)
 
         // One renderable primitive with its geometry and material
         RenderableManager.Builder(1)
@@ -78,10 +78,20 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
                 boxMesh.vertexBuffer,
                 boxMesh.indexBuffer,
             )
-            .material(0, materialInstance)
-            .build(engine, cubeEntity)
+            .material(0, floorMaterial)
+            .build(engine, floorEntity)
 
-        scene.addEntity(cubeEntity)
+        // The mesh is a 1 x 1 x 1 cube at the origin. Without a transform the floor would render
+        // exactly like that. The transform component stretches it to the floor size and moves it
+        // into place. getInstance gives the manager's handle for this entity's component
+        val transformManager = engine.transformManager
+        transformManager.create(floorEntity)
+        transformManager.setTransform(
+            transformManager.getInstance(floorEntity),
+            unitCubeTransform(ToyRoom.floor),
+        )
+
+        scene.addEntity(floorEntity)
 
         // Parallel rays like sunlight, coming from above and in front, slightly from the right
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
@@ -108,15 +118,15 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
         // Native resources need explicit cleanup. Release the View before the objects it uses.
         engine.destroyView(view)
         // Release the object before its material and geometry
-        engine.destroyEntity(cubeEntity)
-        EntityManager.get().destroy(cubeEntity)
+        engine.destroyEntity(floorEntity)
+        EntityManager.get().destroy(floorEntity)
 
         boxMesh.destroy(engine)
         engine.destroyEntity(sunEntity)
         EntityManager.get().destroy(sunEntity)
         engine.destroyScene(scene)
         engine.destroyIndirectLight(ambientLight)
-        engine.destroyMaterialInstance(materialInstance)
+        engine.destroyMaterialInstance(floorMaterial)
         engine.destroyMaterial(material)
         engine.destroySkybox(skybox)
         // The camera component and its entity ID are released separately.
@@ -129,6 +139,10 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
         const val NEAR_METERS = 0.1
         const val FAR_METERS = 50.0
 
+        // Above and in front of the room, looking at the floor center
+        val CAMERA_EYE = doubleArrayOf(ToyRoom.WIDTH / 2.0, 7.0, 8.0)
+        val CAMERA_TARGET = doubleArrayOf(ToyRoom.WIDTH / 2.0, 0.0, ToyRoom.DEPTH / 2.0)
+
         // Filament expects a unit vector
         val SUN_DIRECTION = normalized(-0.5f, -1f, -0.6f)
 
@@ -136,5 +150,19 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
             val length = sqrt(x * x + y * y + z * z)
             return floatArrayOf(x / length, y / length, z / length)
         }
+
+        // Keeps +Y as the up direction
+        fun Camera.lookAt(eye: DoubleArray, target: DoubleArray) {
+            lookAt(eye[0], eye[1], eye[2], target[0], target[1], target[2], 0.0, 1.0, 0.0)
+        }
+
+        // Column-major matrix that stretches the centered unit cube to the box size and moves it
+        // to the box center. Each Matrix call multiplies on the right, so scale applies first
+        fun unitCubeTransform(box: RoomBox): FloatArray =
+            FloatArray(16).also {
+                Matrix.setIdentityM(it, 0)
+                Matrix.translateM(it, 0, box.centerX, box.centerY, box.centerZ)
+                Matrix.scaleM(it, 0, box.sizeX, box.sizeY, box.sizeZ)
+            }
     }
 }
