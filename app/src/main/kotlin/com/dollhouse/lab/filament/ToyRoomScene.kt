@@ -75,7 +75,8 @@ class ToyRoomScene(
     addBox(room.rug)
     addBox(room.wallLeft)
     addBox(room.wallRight)
-    addBox(room.wallBack)
+    room.wallBackParts.forEach { addBox(it) }
+    room.windowFrameParts.forEach { addBox(it) }
     room.wallFrontParts.forEach { addBox(it) }
 
     // Parallel rays like sunlight, coming from above and in front, slightly from the right

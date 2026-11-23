@@ -40,17 +40,95 @@ class ToyRoom(palette: ToyRoomPalette) {
           color = palette.warmWhite,
       )
 
-  // Z walls span the outer width to close the corners without overlapping the side walls
-  val wallBack =
-      RoomBox(
-          name = "wall -Z",
-          minX = -WALL_THICKNESS,
-          minY = 0f,
-          minZ = -WALL_THICKNESS,
-          sizeX = WIDTH + 2 * WALL_THICKNESS,
-          sizeY = HEIGHT,
-          sizeZ = WALL_THICKNESS,
-          color = palette.warmWhite,
+  // Four boxes surround the window opening and close the outer wall corners
+  val wallBackParts =
+      listOf(
+          RoomBox(
+              name = "wall -Z left of window",
+              minX = -WALL_THICKNESS,
+              minY = 0f,
+              minZ = -WALL_THICKNESS,
+              sizeX = WINDOW_MIN_X + WALL_THICKNESS,
+              sizeY = HEIGHT,
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
+          RoomBox(
+              name = "wall -Z right of window",
+              minX = WINDOW_MIN_X + WINDOW_WIDTH,
+              minY = 0f,
+              minZ = -WALL_THICKNESS,
+              sizeX = WIDTH + WALL_THICKNESS - (WINDOW_MIN_X + WINDOW_WIDTH),
+              sizeY = HEIGHT,
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
+          RoomBox(
+              name = "wall -Z below window",
+              minX = WINDOW_MIN_X,
+              minY = 0f,
+              minZ = -WALL_THICKNESS,
+              sizeX = WINDOW_WIDTH,
+              sizeY = WINDOW_MIN_Y,
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
+          RoomBox(
+              name = "wall -Z above window",
+              minX = WINDOW_MIN_X,
+              minY = WINDOW_MIN_Y + WINDOW_HEIGHT,
+              minZ = -WALL_THICKNESS,
+              sizeX = WINDOW_WIDTH,
+              sizeY = HEIGHT - (WINDOW_MIN_Y + WINDOW_HEIGHT),
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
+      )
+
+  // The frame sits inside the opening and protrudes slightly on both sides of the wall
+  val windowFrameParts =
+      listOf(
+          RoomBox(
+              name = "window frame left",
+              minX = WINDOW_MIN_X,
+              minY = WINDOW_MIN_Y,
+              minZ = -WALL_THICKNESS - FRAME_OVERHANG,
+              sizeX = FRAME_THICKNESS,
+              sizeY = WINDOW_HEIGHT,
+              sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
+              color = palette.wood,
+          ),
+          RoomBox(
+              name = "window frame right",
+              minX = WINDOW_MIN_X + WINDOW_WIDTH - FRAME_THICKNESS,
+              minY = WINDOW_MIN_Y,
+              minZ = -WALL_THICKNESS - FRAME_OVERHANG,
+              sizeX = FRAME_THICKNESS,
+              sizeY = WINDOW_HEIGHT,
+              sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
+              color = palette.wood,
+          ),
+          // Horizontal rails fit between the vertical rails without overlapping
+          RoomBox(
+              name = "window frame bottom",
+              minX = WINDOW_MIN_X + FRAME_THICKNESS,
+              minY = WINDOW_MIN_Y,
+              minZ = -WALL_THICKNESS - FRAME_OVERHANG,
+              sizeX = WINDOW_WIDTH - 2 * FRAME_THICKNESS,
+              sizeY = FRAME_THICKNESS,
+              sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
+              color = palette.wood,
+          ),
+          RoomBox(
+              name = "window frame top",
+              minX = WINDOW_MIN_X + FRAME_THICKNESS,
+              minY = WINDOW_MIN_Y + WINDOW_HEIGHT - FRAME_THICKNESS,
+              minZ = -WALL_THICKNESS - FRAME_OVERHANG,
+              sizeX = WINDOW_WIDTH - 2 * FRAME_THICKNESS,
+              sizeY = FRAME_THICKNESS,
+              sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
+              color = palette.wood,
+          ),
       )
 
   // Three boxes leave an empty doorway, with the inner wall face at Z = DEPTH
@@ -152,5 +230,12 @@ class ToyRoom(palette: ToyRoomPalette) {
     private const val DOOR_WIDTH = 0.9f
     private const val DOOR_HEIGHT = 2f
     private const val DOOR_MIN_X = (WIDTH - DOOR_WIDTH) / 2
+
+    private const val WINDOW_WIDTH = 1.2f
+    private const val WINDOW_HEIGHT = 1f
+    private const val WINDOW_MIN_X = (WIDTH - WINDOW_WIDTH) / 2
+    private const val WINDOW_MIN_Y = 0.9f
+    private const val FRAME_THICKNESS = 0.06f
+    private const val FRAME_OVERHANG = 0.02f
   }
 }
