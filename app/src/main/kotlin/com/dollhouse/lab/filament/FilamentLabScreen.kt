@@ -70,6 +70,8 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
             wood = ContextCompat.getColor(context, R.color.room_wood),
             warmWhite = ContextCompat.getColor(context, R.color.room_warm_white),
             skyBlue = ContextCompat.getColor(context, R.color.room_sky_blue),
+            coral = ContextCompat.getColor(context, R.color.room_coral),
+            mustard = ContextCompat.getColor(context, R.color.room_mustard),
         )
     val room = ToyRoom(palette)
         FilamentHost(context) { engine ->

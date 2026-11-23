@@ -70,6 +70,9 @@ class ToyRoomScene(
 
     addBox(room.floor)
     addBox(room.bed)
+    addBox(room.pillow)
+    addBox(room.wardrobe)
+    addBox(room.rug)
     addBox(room.wallLeft)
     addBox(room.wallRight)
     addBox(room.wallBack)

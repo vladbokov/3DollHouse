@@ -5,4 +5,6 @@ data class ToyRoomPalette(
     val wood: Int,
     val warmWhite: Int,
     val skyBlue: Int,
+    val coral: Int,
+    val mustard: Int,
 )

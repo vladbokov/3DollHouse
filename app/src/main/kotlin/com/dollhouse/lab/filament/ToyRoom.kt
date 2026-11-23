@@ -79,6 +79,45 @@ class ToyRoom(palette: ToyRoomPalette) {
           color = palette.skyBlue,
       )
 
+  // Follow the bed position and rest on its top surface
+  val pillow =
+      RoomBox(
+          name = "pillow",
+          minX = bed.minX + 0.1f,
+          minY = bed.minY + bed.sizeY,
+          minZ = bed.minZ + 0.1f,
+          sizeX = bed.sizeX - 0.2f,
+          sizeY = 0.12f,
+          sizeZ = 0.4f,
+          color = palette.warmWhite,
+      )
+
+  // A low toy wardrobe beside the right wall
+  val wardrobe =
+      RoomBox(
+          name = "wardrobe",
+          minX = WIDTH - 1.1f,
+          minY = 0f,
+          minZ = 0.05f,
+          sizeX = 1f,
+          sizeY = 0.8f,
+          sizeZ = 0.5f,
+          color = palette.coral,
+      )
+
+  // A thin box with its bottom on the floor, avoiding coplanar top surfaces
+  val rug =
+      RoomBox(
+          name = "rug",
+          minX = 1.2f,
+          minY = 0f,
+          minZ = 1.6f,
+          sizeX = 1.4f,
+          sizeY = 0.02f,
+          sizeZ = 1.6f,
+          color = palette.mustard,
+      )
+
   companion object {
     const val WIDTH = 3f
     const val DEPTH = 4f
