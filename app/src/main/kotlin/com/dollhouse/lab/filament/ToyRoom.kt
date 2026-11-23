@@ -53,17 +53,40 @@ class ToyRoom(palette: ToyRoomPalette) {
           color = palette.warmWhite,
       )
 
-  // The inner face stays at Z = DEPTH
-  val wallFront =
-      RoomBox(
-          name = "wall +Z",
-          minX = -WALL_THICKNESS,
-          minY = 0f,
-          minZ = DEPTH,
-          sizeX = WIDTH + 2 * WALL_THICKNESS,
-          sizeY = HEIGHT,
-          sizeZ = WALL_THICKNESS,
-          color = palette.warmWhite,
+  // Three boxes leave an empty doorway, with the inner wall face at Z = DEPTH
+  val wallFrontParts =
+      listOf(
+          RoomBox(
+              name = "wall +Z left of door",
+              minX = -WALL_THICKNESS,
+              minY = 0f,
+              minZ = DEPTH,
+              sizeX = DOOR_MIN_X + WALL_THICKNESS,
+              sizeY = HEIGHT,
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
+          RoomBox(
+              name = "wall +Z right of door",
+              minX = DOOR_MIN_X + DOOR_WIDTH,
+              minY = 0f,
+              minZ = DEPTH,
+              sizeX = WIDTH + WALL_THICKNESS - (DOOR_MIN_X + DOOR_WIDTH),
+              sizeY = HEIGHT,
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
+          // The header fills only the space above the opening
+          RoomBox(
+              name = "wall +Z above door",
+              minX = DOOR_MIN_X,
+              minY = DOOR_HEIGHT,
+              minZ = DEPTH,
+              sizeX = DOOR_WIDTH,
+              sizeY = HEIGHT - DOOR_HEIGHT,
+              sizeZ = WALL_THICKNESS,
+              color = palette.warmWhite,
+          ),
       )
 
   // The bed rests on the floor with a 0.1 m gap from the X and Z edges
@@ -125,5 +148,9 @@ class ToyRoom(palette: ToyRoomPalette) {
 
     private const val FLOOR_THICKNESS = 0.1f
     private const val WALL_THICKNESS = 0.1f
+
+    private const val DOOR_WIDTH = 0.9f
+    private const val DOOR_HEIGHT = 2f
+    private const val DOOR_MIN_X = (WIDTH - DOOR_WIDTH) / 2
   }
 }

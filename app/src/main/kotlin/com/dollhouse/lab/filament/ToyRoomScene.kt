@@ -76,7 +76,7 @@ class ToyRoomScene(
     addBox(room.wallLeft)
     addBox(room.wallRight)
     addBox(room.wallBack)
-    addBox(room.wallFront)
+    room.wallFrontParts.forEach { addBox(it) }
 
     // Parallel rays like sunlight, coming from above and in front, slightly from the right
     LightManager.Builder(LightManager.Type.DIRECTIONAL)
