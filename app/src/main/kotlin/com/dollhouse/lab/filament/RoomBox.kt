@@ -9,7 +9,7 @@ data class RoomBox(
     val sizeX: Float,
     val sizeY: Float,
     val sizeZ: Float,
-    val color: Int, // 0xRRGGBB in sRGB
+    val color: Int, // Packed sRGB color, alpha is ignored by the opaque material
 ) {
     // The unit cube is centered, so placing it requires the box center
     val centerX: Float

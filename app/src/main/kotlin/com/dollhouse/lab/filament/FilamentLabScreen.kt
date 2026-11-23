@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -63,8 +64,20 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
 
     // Keep the Engine and scene across recompositions.
     val filamentHost = remember {
+    // Resolve resource IDs before passing colors to the room model
+    val palette =
+        ToyRoomPalette(
+            wood = ContextCompat.getColor(context, R.color.room_wood),
+            warmWhite = ContextCompat.getColor(context, R.color.room_warm_white),
+            skyBlue = ContextCompat.getColor(context, R.color.room_sky_blue),
+        )
+    val room = ToyRoom(palette)
         FilamentHost(context) { engine ->
-            ToyRoomScene(engine, context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH))
+      ToyRoomScene(
+          engine,
+          context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH),
+          room,
+      )
         }
     }
 

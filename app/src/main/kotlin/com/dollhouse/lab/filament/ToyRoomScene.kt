@@ -7,6 +7,7 @@ import com.google.android.filament.EntityManager
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
 import com.google.android.filament.Material
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
@@ -18,7 +19,11 @@ import kotlin.math.sqrt
  * Sets up the room's scene, camera, lights and background. FilamentHost handles drawing frames. The
  * Engine comes from outside and is not ours to destroy.
  */
-class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : FilamentContent {
+class ToyRoomScene(
+    private val engine: Engine,
+    materialData: ByteBuffer,
+    room: ToyRoom,
+) : FilamentContent {
     // Holds the room boxes, lights and background
     private val scene = engine.createScene()
 
@@ -35,18 +40,12 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
     private val material =
         Material.Builder().payload(materialData, materialData.remaining()).build(engine)
 
-    // Surface values of the floor
-    private val floorMaterial =
-        material.createInstance().apply {
-            setBaseColor(ToyRoom.floor.color)
-            setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
-        }
+  // Keep each box's resources for cleanup
+  private val boxEntities = mutableListOf<Int>()
+  private val materialInstances = mutableListOf<MaterialInstance>()
 
     // Unit cube geometry, scaled into each room box
     private val boxMesh = BoxMesh(engine)
-
-    // ID of the floor object
-    private val floorEntity = EntityManager.get().create()
 
     // Entity carrying the directional light component
     private val sunEntity = EntityManager.get().create()
@@ -69,38 +68,56 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
         // Look down at the floor center from above and outside the room
         camera.lookAt(eye = CAMERA_EYE, target = CAMERA_TARGET)
 
-        // One renderable primitive with its geometry and material
-        RenderableManager.Builder(1)
-            .boundingBox(boxMesh.boundingBox)
-            .geometry(
-                0,
-                RenderableManager.PrimitiveType.TRIANGLES,
-                boxMesh.vertexBuffer,
-                boxMesh.indexBuffer,
-            )
-            .material(0, floorMaterial)
-            .build(engine, floorEntity)
+    addBox(room.floor)
+    addBox(room.bed)
+    addBox(room.wallLeft)
+    addBox(room.wallRight)
+    addBox(room.wallBack)
+    addBox(room.wallFront)
 
-        // The mesh is a 1 x 1 x 1 cube at the origin. Without a transform the floor would render
-        // exactly like that. The transform component stretches it to the floor size and moves it
-        // into place. getInstance gives the manager's handle for this entity's component
-        val transformManager = engine.transformManager
-        transformManager.create(floorEntity)
-        transformManager.setTransform(
-            transformManager.getInstance(floorEntity),
-            unitCubeTransform(ToyRoom.floor),
+    // Parallel rays like sunlight, coming from above and in front, slightly from the right
+    LightManager.Builder(LightManager.Type.DIRECTIONAL)
+        .color(1f, 0.96f, 0.9f)
+        .intensity(100_000f)
+        .direction(SUN_DIRECTION[0], SUN_DIRECTION[1], SUN_DIRECTION[2])
+        .build(engine, sunEntity)
+
+    scene.addEntity(sunEntity)
+  }
+
+  private fun addBox(box: RoomBox) {
+    val instance =
+        material.createInstance().apply {
+          setBaseColor(box.color)
+          setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
+        }
+    materialInstances += instance
+
+    val entity = EntityManager.get().create()
+
+    // Shared geometry, separate material instance
+    RenderableManager.Builder(1)
+        .boundingBox(boxMesh.boundingBox)
+        .geometry(
+            0,
+            RenderableManager.PrimitiveType.TRIANGLES,
+            boxMesh.vertexBuffer,
+            boxMesh.indexBuffer,
         )
+        .material(0, instance)
+        .build(engine, entity)
 
-        scene.addEntity(floorEntity)
+    // The transform stretches the centered unit cube and moves it into place
+    // getInstance gives the manager's handle for this entity's component
+    val transformManager = engine.transformManager
+    transformManager.create(entity)
+    transformManager.setTransform(
+        transformManager.getInstance(entity),
+        unitCubeTransform(box),
+    )
 
-        // Parallel rays like sunlight, coming from above and in front, slightly from the right
-        LightManager.Builder(LightManager.Type.DIRECTIONAL)
-            .color(1f, 0.96f, 0.9f)
-            .intensity(100_000f)
-            .direction(SUN_DIRECTION[0], SUN_DIRECTION[1], SUN_DIRECTION[2])
-            .build(engine, sunEntity)
-
-        scene.addEntity(sunEntity)
+    scene.addEntity(entity)
+    boxEntities += entity
     }
 
     /** Updates the drawing area when the surface changes size. Width and height are in pixels. */
@@ -117,16 +134,18 @@ class ToyRoomScene(private val engine: Engine, materialData: ByteBuffer) : Filam
     override fun destroy() {
         // Native resources need explicit cleanup. Release the View before the objects it uses.
         engine.destroyView(view)
-        // Release the object before its material and geometry
-        engine.destroyEntity(floorEntity)
-        EntityManager.get().destroy(floorEntity)
+    // Release boxes before their shared geometry and materials
+    for (entity in boxEntities) {
+      engine.destroyEntity(entity)
+      EntityManager.get().destroy(entity)
+    }
 
         boxMesh.destroy(engine)
         engine.destroyEntity(sunEntity)
         EntityManager.get().destroy(sunEntity)
         engine.destroyScene(scene)
         engine.destroyIndirectLight(ambientLight)
-        engine.destroyMaterialInstance(floorMaterial)
+    materialInstances.forEach { engine.destroyMaterialInstance(it) }
         engine.destroyMaterial(material)
         engine.destroySkybox(skybox)
         // The camera component and its entity ID are released separately.
