@@ -14,11 +14,24 @@ import com.google.android.filament.android.UiHelper
  * Owns the Android surface and the frame loop. Scene setup belongs to the content created by
  * contentFactory. Use this class on the main thread.
  */
-class FilamentHost<C : FilamentContent>(context: Context, contentFactory: (Engine) -> C) {
+class FilamentHost<C : FilamentContent>(
+    context: Context,
+    requestedBackend: Engine.Backend,
+    contentFactory: (Engine) -> C,
+) {
     val surfaceView = SurfaceView(context)
 
     // Creates and owns the native graphics resources.
-    private val engine = Engine.Builder().backend(Engine.Backend.OPENGL).build()
+    private val engine =
+        try {
+            Engine.Builder().backend(requestedBackend).build()
+        } catch (error: IllegalStateException) {
+            if (requestedBackend != Engine.Backend.VULKAN) throw error
+            // Retry with OpenGL ES if Vulkan initialization fails
+            Engine.Builder().backend(Engine.Backend.OPENGL).build()
+        }
+
+    val actualBackend: Engine.Backend = engine.backend
 
     // Generates drawing commands for each frame.
     private val renderer = engine.createRenderer()
