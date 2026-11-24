@@ -1,10 +1,11 @@
 package com.dollhouse.lab.filament
 
+import com.dollhouse.lab.model.FurnitureType
 import com.dollhouse.lab.model.RoomLayout
 
 class ToyRoom(val layout: RoomLayout, palette: ToyRoomPalette) {
-    private val doorMinX = (layout.width - DOOR_WIDTH) / 2
-    private val windowMinX = (layout.width - WINDOW_WIDTH) / 2
+    private val door = layout.door
+    private val window = layout.window
 
     // The floor extends under the walls, keeping its top surface at Y = 0
     val floor =
@@ -53,38 +54,38 @@ class ToyRoom(val layout: RoomLayout, palette: ToyRoomPalette) {
                 minX = -WALL_THICKNESS,
                 minY = 0f,
                 minZ = -WALL_THICKNESS,
-                sizeX = windowMinX + WALL_THICKNESS,
+                sizeX = window.minX + WALL_THICKNESS,
                 sizeY = layout.height,
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
             ),
             RoomBox(
                 name = "wall -Z right of window",
-                minX = windowMinX + WINDOW_WIDTH,
+                minX = window.minX + window.width,
                 minY = 0f,
                 minZ = -WALL_THICKNESS,
-                sizeX = layout.width + WALL_THICKNESS - (windowMinX + WINDOW_WIDTH),
+                sizeX = layout.width + WALL_THICKNESS - (window.minX + window.width),
                 sizeY = layout.height,
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
             ),
             RoomBox(
                 name = "wall -Z below window",
-                minX = windowMinX,
+                minX = window.minX,
                 minY = 0f,
                 minZ = -WALL_THICKNESS,
-                sizeX = WINDOW_WIDTH,
-                sizeY = WINDOW_MIN_Y,
+                sizeX = window.width,
+                sizeY = window.minY,
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
             ),
             RoomBox(
                 name = "wall -Z above window",
-                minX = windowMinX,
-                minY = WINDOW_MIN_Y + WINDOW_HEIGHT,
+                minX = window.minX,
+                minY = window.minY + window.height,
                 minZ = -WALL_THICKNESS,
-                sizeX = WINDOW_WIDTH,
-                sizeY = layout.height - (WINDOW_MIN_Y + WINDOW_HEIGHT),
+                sizeX = window.width,
+                sizeY = layout.height - (window.minY + window.height),
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
             ),
@@ -95,66 +96,66 @@ class ToyRoom(val layout: RoomLayout, palette: ToyRoomPalette) {
         listOf(
             RoomBox(
                 name = "window frame left",
-                minX = windowMinX,
-                minY = WINDOW_MIN_Y,
+                minX = window.minX,
+                minY = window.minY,
                 minZ = -WALL_THICKNESS - FRAME_OVERHANG,
                 sizeX = FRAME_THICKNESS,
-                sizeY = WINDOW_HEIGHT,
+                sizeY = window.height,
                 sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
                 color = palette.wood,
             ),
             RoomBox(
                 name = "window frame right",
-                minX = windowMinX + WINDOW_WIDTH - FRAME_THICKNESS,
-                minY = WINDOW_MIN_Y,
+                minX = window.minX + window.width - FRAME_THICKNESS,
+                minY = window.minY,
                 minZ = -WALL_THICKNESS - FRAME_OVERHANG,
                 sizeX = FRAME_THICKNESS,
-                sizeY = WINDOW_HEIGHT,
+                sizeY = window.height,
                 sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
                 color = palette.wood,
             ),
             // Horizontal rails fit between the vertical rails without overlapping
             RoomBox(
                 name = "window frame bottom",
-                minX = windowMinX + FRAME_THICKNESS,
-                minY = WINDOW_MIN_Y,
+                minX = window.minX + FRAME_THICKNESS,
+                minY = window.minY,
                 minZ = -WALL_THICKNESS - FRAME_OVERHANG,
-                sizeX = WINDOW_WIDTH - 2 * FRAME_THICKNESS,
+                sizeX = window.width - 2 * FRAME_THICKNESS,
                 sizeY = FRAME_THICKNESS,
                 sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
                 color = palette.wood,
             ),
             RoomBox(
                 name = "window frame top",
-                minX = windowMinX + FRAME_THICKNESS,
-                minY = WINDOW_MIN_Y + WINDOW_HEIGHT - FRAME_THICKNESS,
+                minX = window.minX + FRAME_THICKNESS,
+                minY = window.minY + window.height - FRAME_THICKNESS,
                 minZ = -WALL_THICKNESS - FRAME_OVERHANG,
-                sizeX = WINDOW_WIDTH - 2 * FRAME_THICKNESS,
+                sizeX = window.width - 2 * FRAME_THICKNESS,
                 sizeY = FRAME_THICKNESS,
                 sizeZ = WALL_THICKNESS + 2 * FRAME_OVERHANG,
                 color = palette.wood,
             ),
         )
 
-    // Three boxes leave an empty doorway, with the inner wall face at Z = layout.depth
+    // Wall segments surround the doorway, with the inner face at Z = layout.depth
     val wallFrontParts =
-        listOf(
+        listOfNotNull(
             RoomBox(
                 name = "wall +Z left of door",
                 minX = -WALL_THICKNESS,
                 minY = 0f,
                 minZ = layout.depth,
-                sizeX = doorMinX + WALL_THICKNESS,
+                sizeX = door.minX + WALL_THICKNESS,
                 sizeY = layout.height,
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
             ),
             RoomBox(
                 name = "wall +Z right of door",
-                minX = doorMinX + DOOR_WIDTH,
+                minX = door.minX + door.width,
                 minY = 0f,
                 minZ = layout.depth,
-                sizeX = layout.width + WALL_THICKNESS - (doorMinX + DOOR_WIDTH),
+                sizeX = layout.width + WALL_THICKNESS - (door.minX + door.width),
                 sizeY = layout.height,
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
@@ -162,78 +163,73 @@ class ToyRoom(val layout: RoomLayout, palette: ToyRoomPalette) {
             // The header fills only the space above the opening
             RoomBox(
                 name = "wall +Z above door",
-                minX = doorMinX,
-                minY = DOOR_HEIGHT,
+                minX = door.minX,
+                minY = door.minY + door.height,
                 minZ = layout.depth,
-                sizeX = DOOR_WIDTH,
-                sizeY = layout.height - DOOR_HEIGHT,
+                sizeX = door.width,
+                sizeY = layout.height - (door.minY + door.height),
                 sizeZ = WALL_THICKNESS,
                 color = palette.warmWhite,
             ),
+            if (door.minY > 0f) {
+                RoomBox(
+                    name = "wall +Z below door",
+                    minX = door.minX,
+                    minY = 0f,
+                    minZ = layout.depth,
+                    sizeX = door.width,
+                    sizeY = door.minY,
+                    sizeZ = WALL_THICKNESS,
+                    color = palette.warmWhite,
+                )
+            } else {
+                null
+            },
         )
 
-    // The bed rests on the floor with a 0.1 m gap from the X and Z edges
-    val bed =
-        RoomBox(
-            name = "bed",
-            minX = 0.1f,
-            minY = 0f,
-            minZ = 0.1f,
-            sizeX = 0.9f,
-            sizeY = 0.45f,
-            sizeZ = 1.9f,
-            color = palette.skyBlue,
-        )
+    val furnitureBoxes: List<RoomBox> = buildList {
+        for (item in layout.furniture) {
+            val type = item.type
+            val color =
+                when (type) {
+                    FurnitureType.Rug -> palette.mustard
+                    FurnitureType.Bed -> palette.skyBlue
+                    FurnitureType.Wardrobe -> palette.coral
+                }
+            val box =
+                RoomBox(
+                    name = item.id,
+                    minX = item.centerX - type.sizeX / 2,
+                    minY = 0f,
+                    minZ = item.centerZ - type.sizeZ / 2,
+                    sizeX = type.sizeX,
+                    sizeY = type.sizeY,
+                    sizeZ = type.sizeZ,
+                    color = color,
+                )
+            add(box)
 
-    // Follow the bed position and rest on its top surface
-    val pillow =
-        RoomBox(
-            name = "pillow",
-            minX = bed.minX + 0.1f,
-            minY = bed.minY + bed.sizeY,
-            minZ = bed.minZ + 0.1f,
-            sizeX = bed.sizeX - 0.2f,
-            sizeY = 0.12f,
-            sizeZ = 0.4f,
-            color = palette.warmWhite,
-        )
-
-    // A low toy wardrobe beside the right wall
-    val wardrobe =
-        RoomBox(
-            name = "wardrobe",
-            minX = layout.width - 1.1f,
-            minY = 0f,
-            minZ = 0.05f,
-            sizeX = 1f,
-            sizeY = 0.8f,
-            sizeZ = 0.5f,
-            color = palette.coral,
-        )
-
-    // A thin box with its bottom on the floor, avoiding coplanar top surfaces
-    val rug =
-        RoomBox(
-            name = "rug",
-            minX = 1.2f,
-            minY = 0f,
-            minZ = 1.6f,
-            sizeX = 1.4f,
-            sizeY = 0.02f,
-            sizeZ = 1.6f,
-            color = palette.mustard,
-        )
+            if (type == FurnitureType.Bed) {
+                add(
+                    RoomBox(
+                        name = "pillow",
+                        minX = box.minX + 0.1f,
+                        minY = box.minY + box.sizeY,
+                        minZ = box.minZ + 0.1f,
+                        sizeX = box.sizeX - 0.2f,
+                        sizeY = 0.12f,
+                        sizeZ = 0.4f,
+                        color = palette.warmWhite,
+                    )
+                )
+            }
+        }
+    }
 
     companion object {
         private const val FLOOR_THICKNESS = 0.1f
         private const val WALL_THICKNESS = 0.1f
 
-        private const val DOOR_WIDTH = 0.9f
-        private const val DOOR_HEIGHT = 2f
-
-        private const val WINDOW_WIDTH = 1.2f
-        private const val WINDOW_HEIGHT = 1f
-        private const val WINDOW_MIN_Y = 0.9f
         private const val FRAME_THICKNESS = 0.06f
         private const val FRAME_OVERHANG = 0.02f
     }

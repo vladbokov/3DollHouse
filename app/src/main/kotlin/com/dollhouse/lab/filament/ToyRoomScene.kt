@@ -82,10 +82,7 @@ class ToyRoomScene(
         view.camera = camera
 
         addBox(room.floor)
-        addBox(room.bed)
-        addBox(room.pillow)
-        addBox(room.wardrobe)
-        addBox(room.rug)
+        room.furnitureBoxes.forEach { addBox(it) }
 
         addWall(listOf(room.wallLeft), outwardX = -1f, outwardZ = 0f)
         addWall(listOf(room.wallRight), outwardX = 1f, outwardZ = 0f)
