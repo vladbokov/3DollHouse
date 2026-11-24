@@ -6,9 +6,13 @@ import android.view.Surface
 import android.view.SurfaceView
 import com.google.android.filament.Engine
 import com.google.android.filament.Filament
+import com.google.android.filament.Renderer
 import com.google.android.filament.SwapChain
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
+
+/** [frameMs] is the average interval between drawn frames, [gpuMs] is one GPU sample. */
+data class FrameStats(val fps: Float, val frameMs: Float, val gpuMs: Float?)
 
 /**
  * Owns the Android surface and the frame loop. Scene setup belongs to the content created by
@@ -48,6 +52,11 @@ class FilamentHost<C : FilamentContent>(
     private var running = false
     private var destroyed = false
 
+    var onFrameStats: ((FrameStats?) -> Unit)? = null
+    private var statsWindowStartNanos = 0L
+    private var statsFrames = 0
+    private val frameInfos = Array(GPU_HISTORY_SIZE) { Renderer.FrameInfo() }
+
     private val frameCallback =
         object : Choreographer.FrameCallback {
             override fun doFrame(frameTimeNanos: Long) {
@@ -61,19 +70,55 @@ class FilamentHost<C : FilamentContent>(
                 if (renderer.beginFrame(target, frameTimeNanos)) {
                     renderer.render(content.view)
                     renderer.endFrame()
+                    countFrame(frameTimeNanos)
                 }
             }
         }
 
+    private fun countFrame(frameTimeNanos: Long) {
+        if (statsWindowStartNanos == 0L) {
+            statsWindowStartNanos = frameTimeNanos
+            return
+        }
+
+        statsFrames++
+        val elapsedNanos = frameTimeNanos - statsWindowStartNanos
+        if (elapsedNanos < STATS_WINDOW_NANOS) return
+
+        val fps = statsFrames * NANOS_PER_SECOND / elapsedNanos
+        statsWindowStartNanos = frameTimeNanos
+        statsFrames = 0
+        onFrameStats?.invoke(
+            FrameStats(fps, frameMs = MILLIS_PER_SECOND / fps, gpuMs = latestGpuMs()))
+    }
+
+    private fun latestGpuMs(): Float? {
+        val count = renderer.getFrameInfoHistory(frameInfos)
+        for (index in 0 until count) {
+            val nanos = frameInfos[index].gpuFrameDuration
+            // Pending and unsupported timings have negative values
+            if (nanos > 0) return nanos / NANOS_PER_MILLISECOND
+        }
+        return null
+    }
+
+    private fun resetFrameStats() {
+        statsWindowStartNanos = 0L
+        statsFrames = 0
+        onFrameStats?.invoke(null)
+    }
+
     private val surfaceCallback =
         object : UiHelper.RendererCallback {
             override fun onNativeWindowChanged(surface: Surface) {
+                resetFrameStats()
                 swapChain?.let { engine.destroySwapChain(it) }
                 swapChain = engine.createSwapChain(surface, uiHelper.swapChainFlags)
                 displayHelper.attach(renderer, surfaceView.display)
             }
 
             override fun onDetachedFromSurface() {
+                resetFrameStats()
                 displayHelper.detach()
                 swapChain?.let {
                     engine.destroySwapChain(it)
@@ -105,6 +150,7 @@ class FilamentHost<C : FilamentContent>(
     fun pause() {
         running = false
         choreographer.removeFrameCallback(frameCallback)
+        resetFrameStats()
     }
 
     /** Stops drawing and releases resources. The Engine is destroyed last. */
@@ -119,6 +165,12 @@ class FilamentHost<C : FilamentContent>(
     }
 
     private companion object {
+        const val STATS_WINDOW_NANOS = 500_000_000L
+        const val GPU_HISTORY_SIZE = 8
+        const val NANOS_PER_SECOND = 1_000_000_000f
+        const val MILLIS_PER_SECOND = 1_000f
+        const val NANOS_PER_MILLISECOND = 1_000_000f
+
         init {
             // Load the native library before creating an Engine.
             Filament.init()

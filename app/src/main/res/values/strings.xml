@@ -7,6 +7,9 @@
     <string name="filament_backend_starting">Starting graphics backend…</string>
     <string name="filament_backend_active">Backend: %1$s</string>
     <string name="filament_backend_fallback">Backend: %1$s (%2$s unavailable)</string>
+    <string name="filament_frame_stats_pending">Measuring frame rate…</string>
+    <string name="filament_frame_stats">%1$.0f FPS · %2$.1f ms/frame</string>
+    <string name="filament_frame_stats_with_gpu">%1$.0f FPS · %2$.1f ms/frame · GPU %3$.1f ms</string>
     <string name="lab_status_in_progress">in progress</string>
     <string name="filament_lab_placeholder">3D scene will appear here</string>
     <string name="action_back">Back</string>

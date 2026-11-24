@@ -72,6 +72,7 @@ private enum class LabBackend(@StringRes val labelRes: Int, val filament: Engine
 fun FilamentLabScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     var requested by rememberSaveable { mutableStateOf(LabBackend.OpenGlEs) }
     var actual by remember(requested) { mutableStateOf<Engine.Backend?>(null) }
+    var frameStats by remember(requested) { mutableStateOf<FrameStats?>(null) }
 
     // Keep the camera across screen recreation and backend changes
     var orbit by
@@ -101,7 +102,12 @@ fun FilamentLabScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             )
         },
         bottomBar = {
-            BackendControls(requested = requested, actual = actual, onSelect = { requested = it })
+            BackendControls(
+                requested = requested,
+                actual = actual,
+                frameStats = frameStats,
+                onSelect = { requested = it },
+            )
         },
     ) { padding ->
         // A new backend needs a new Engine and SurfaceView
@@ -119,6 +125,7 @@ fun FilamentLabScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             .zoom(zoom)
                 },
                 onActualBackend = { actual = it },
+                onFrameStats = { frameStats = it },
                 modifier = Modifier.fillMaxSize().padding(padding),
             )
         }
@@ -130,6 +137,7 @@ fun FilamentLabScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 private fun BackendControls(
     requested: LabBackend,
     actual: Engine.Backend?,
+    frameStats: FrameStats?,
     onSelect: (LabBackend) -> Unit,
 ) {
     Surface {
@@ -166,7 +174,20 @@ private fun BackendControls(
                     }
                 }
             Text(status)
+            Text(frameStatsLabel(frameStats))
         }
+    }
+}
+
+@Composable
+private fun frameStatsLabel(stats: FrameStats?): String {
+    if (stats == null) return stringResource(R.string.filament_frame_stats_pending)
+
+    val gpuMs = stats.gpuMs
+    return if (gpuMs == null) {
+        stringResource(R.string.filament_frame_stats, stats.fps, stats.frameMs)
+    } else {
+        stringResource(R.string.filament_frame_stats_with_gpu, stats.fps, stats.frameMs, gpuMs)
     }
 }
 
@@ -177,6 +198,7 @@ private fun FilamentSurface(
     orbit: OrbitCamera,
     onCameraGesture: (Offset, Float) -> Unit,
     onActualBackend: (Engine.Backend) -> Unit,
+    onFrameStats: (FrameStats?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Studio preview cannot create a native rendering surface.
@@ -213,7 +235,11 @@ private fun FilamentSurface(
     // Released together with the remembered host, so a destroyed host is never reused.
     DisposableEffect(filamentHost) {
         onActualBackend(filamentHost.actualBackend)
-        onDispose { filamentHost.destroy() }
+        filamentHost.onFrameStats = onFrameStats
+        onDispose {
+            filamentHost.onFrameStats = null
+            filamentHost.destroy()
+        }
     }
 
     // Re-subscribes when the lifecycle owner changes without destroying the host.
