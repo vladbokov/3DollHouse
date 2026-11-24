@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -24,15 +25,19 @@ import com.dollhouse.lab.model.RoomLayout
 import com.dollhouse.lab.ui.theme.ToyRoomPalette
 import com.google.android.filament.Engine
 
-/** Places the surface in Compose and follows the screen lifecycle. */
+/**
+ * Places the surface in Compose and follows the screen lifecycle.
+ *
+ * Uses the first layout to build the scene. Later layouts update furniture positions.
+ */
 @Composable
 internal fun FilamentSurface(
     layout: RoomLayout,
     requestedBackend: Engine.Backend,
     orbit: OrbitCamera,
     onCameraGesture: (Offset, Float) -> Unit,
-    onActualBackend: (Engine.Backend) -> Unit,
-    onFrameStats: (FrameStats?) -> Unit,
+    onActualBackend: ((Engine.Backend) -> Unit)? = null,
+    onFrameStats: ((FrameStats?) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Studio preview cannot create a native rendering surface.
@@ -44,27 +49,25 @@ internal fun FilamentSurface(
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    // Keep the Engine and scene across recompositions, a new layout rebuilds them
-    val filamentHost =
-        remember(layout) {
-            val palette = ToyRoomPalette.fromResources(context)
-            val room = ToyRoom(layout, palette)
-            FilamentHost(context, requestedBackend) { engine ->
-                ToyRoomScene(
-                    engine,
-                    context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH),
-                    room,
-                    initialOrbit = orbit,
-                )
-            }
+    // Keep the Engine and scene while furniture moves
+    val filamentHost = remember {
+        val palette = ToyRoomPalette.fromResources(context)
+        val room = ToyRoom(layout, palette)
+        FilamentHost(context, requestedBackend) { engine ->
+            ToyRoomScene(
+                engine,
+                context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH),
+                room,
+                initialOrbit = orbit,
+            )
         }
+    }
 
-    val latestOnFrameStats by rememberUpdatedState(onFrameStats)
+    SideEffect { filamentHost.onFrameStats = onFrameStats }
 
     // Released together with the remembered host, so a destroyed host is never reused.
     DisposableEffect(filamentHost) {
-        onActualBackend(filamentHost.actualBackend)
-        filamentHost.onFrameStats = { stats -> latestOnFrameStats(stats) }
+        onActualBackend?.invoke(filamentHost.actualBackend)
         onDispose {
             filamentHost.onFrameStats = null
             filamentHost.destroy()
@@ -92,19 +95,14 @@ internal fun FilamentSurface(
 
     val scene = filamentHost.content
     LaunchedEffect(scene, orbit) { scene.setCamera(orbit) }
+    LaunchedEffect(scene, layout) { scene.updateFurniture(layout.furniture) }
     val handleCameraGesture by rememberUpdatedState(onCameraGesture)
 
     Box(
         modifier =
             modifier.pointerInput(scene) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    handleCameraGesture(pan, zoom)
-                }
-            },
-    ) {
-        AndroidView(
-            factory = { filamentHost.surfaceView },
-            modifier = Modifier.fillMaxSize(),
-        )
+                detectTransformGestures { _, pan, zoom, _ -> handleCameraGesture(pan, zoom) }
+            }) {
+            AndroidView(factory = { filamentHost.surfaceView }, modifier = Modifier.fillMaxSize())
     }
 }

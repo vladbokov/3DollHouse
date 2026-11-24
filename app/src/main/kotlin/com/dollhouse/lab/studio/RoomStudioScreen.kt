@@ -19,7 +19,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -51,17 +50,14 @@ internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier)
     var layout by
         rememberSaveable(stateSaver = RoomLayoutSaver) { mutableStateOf(defaultRoomLayout) }
     var orbit by rememberRoomOrbitCamera()
-    val initialLayout = remember { layout }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val panels: @Composable (Modifier) -> Unit = { panelModifier ->
         FilamentSurface(
-            layout = initialLayout,
+            layout = layout,
             requestedBackend = Engine.Backend.OPENGL,
             orbit = orbit,
             onCameraGesture = { pan, zoom -> orbit = orbit.applyGesture(pan, zoom) },
-            onActualBackend = {},
-            onFrameStats = {},
             modifier = panelModifier,
         )
         RoomPlan(
