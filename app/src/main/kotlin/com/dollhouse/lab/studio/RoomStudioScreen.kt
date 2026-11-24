@@ -1,7 +1,13 @@
 package com.dollhouse.lab.studio
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -12,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dollhouse.lab.R
+import com.dollhouse.lab.model.defaultRoomLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +34,17 @@ internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier)
                     )
                 }
             },
+        )
+        RoomPlan(
+            layout = defaultRoomLayout,
+            modifier =
+                Modifier.weight(1f)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                        )
+                    ),
         )
     }
 }
