@@ -3,6 +3,9 @@
     <string name="home_title">Dollhouse Lab</string>
     <string name="filament_lab_title">Filament Lab</string>
     <string name="room_studio_title">Room Studio</string>
+    <string name="room_plan_rug">Rug</string>
+    <string name="room_plan_bed">Bed</string>
+    <string name="room_plan_wardrobe">Wardrobe</string>
     <string name="filament_backend_opengl_es">OpenGL ES</string>
     <string name="filament_backend_vulkan">Vulkan</string>
     <string name="filament_backend_starting">Starting graphics backend…</string>

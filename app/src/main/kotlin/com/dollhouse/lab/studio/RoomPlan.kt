@@ -4,13 +4,19 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import com.dollhouse.lab.R
+import com.dollhouse.lab.model.FurnitureType
 import com.dollhouse.lab.model.RoomLayout
 import com.dollhouse.lab.ui.theme.ToyRoomPalette
 
@@ -23,6 +29,17 @@ internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
     val wallColor = Color(palette.warmWhite)
     val outlineColor = MaterialTheme.colorScheme.onSurface
     val gridColor = outlineColor.copy(alpha = 0.24f)
+    val textMeasurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelSmall
+    val labels =
+        mapOf(
+            FurnitureType.Rug to
+                textMeasurer.measure(stringResource(R.string.room_plan_rug), labelStyle),
+            FurnitureType.Bed to
+                textMeasurer.measure(stringResource(R.string.room_plan_bed), labelStyle),
+            FurnitureType.Wardrobe to
+                textMeasurer.measure(stringResource(R.string.room_plan_wardrobe), labelStyle),
+        )
 
     Canvas(modifier) {
         val transform =
@@ -45,6 +62,26 @@ internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
         while (z < layout.depth) {
             drawLine(gridColor, transform.toCanvas(0f, z), transform.toCanvas(layout.width, z))
             z += GRID_STEP_METERS
+        }
+
+        for (item in layout.furniture) {
+            val center = transform.toCanvas(item.centerX, item.centerZ)
+            val itemSize = Size(item.type.sizeX, item.type.sizeZ) * transform.pixelsPerMeter
+            val topLeft = center - Offset(itemSize.width / 2, itemSize.height / 2)
+            drawRect(
+                color = Color(palette.furnitureColor(item.type)),
+                topLeft = topLeft,
+                size = itemSize,
+            )
+
+            val label = labels.getValue(item.type)
+            if (label.size.width <= itemSize.width && label.size.height <= itemSize.height) {
+                drawText(
+                    textLayoutResult = label,
+                    color = outlineColor,
+                    topLeft = center - Offset(label.size.width / 2f, label.size.height / 2f),
+                )
+            }
         }
 
         drawWalls(layout, transform, wallColor, outlineColor)

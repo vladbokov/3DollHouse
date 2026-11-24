@@ -192,12 +192,6 @@ class ToyRoom(val layout: RoomLayout, private val palette: ToyRoomPalette) {
     // Build each box relative to the furniture center on the floor
     fun furnitureBoxes(item: Furniture): List<RoomBox> = buildList {
         val type = item.type
-        val color =
-            when (type) {
-                FurnitureType.Rug -> palette.mustard
-                FurnitureType.Bed -> palette.skyBlue
-                FurnitureType.Wardrobe -> palette.coral
-            }
         val box =
             RoomBox(
                 name = item.id,
@@ -207,7 +201,7 @@ class ToyRoom(val layout: RoomLayout, private val palette: ToyRoomPalette) {
                 sizeX = type.sizeX,
                 sizeY = type.sizeY,
                 sizeZ = type.sizeZ,
-                color = color,
+                color = palette.furnitureColor(type),
             )
         add(box)
 
