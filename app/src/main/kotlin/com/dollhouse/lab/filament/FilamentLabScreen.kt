@@ -46,6 +46,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dollhouse.lab.R
+import com.dollhouse.lab.model.defaultRoomLayout
 import com.dollhouse.lab.ui.theme.DollhouseTheme
 import com.google.android.filament.Engine
 
@@ -221,7 +222,7 @@ private fun FilamentSurface(
                 coral = ContextCompat.getColor(context, R.color.room_coral),
                 mustard = ContextCompat.getColor(context, R.color.room_mustard),
             )
-        val room = ToyRoom(palette)
+        val room = ToyRoom(defaultRoomLayout, palette)
         FilamentHost(context, requestedBackend) { engine ->
             ToyRoomScene(
                 engine,
