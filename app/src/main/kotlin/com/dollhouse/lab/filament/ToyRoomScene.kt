@@ -167,7 +167,7 @@ class ToyRoomScene(
 
     scene.addEntity(entity)
     boxEntities += entity
-        return entity
+    return entity
     }
 
     /** Updates the drawing area when the surface changes size. Width and height are in pixels. */
