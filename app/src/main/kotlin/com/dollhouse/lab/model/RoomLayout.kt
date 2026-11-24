@@ -14,6 +14,27 @@ data class RoomLayout(
         x in (item.centerX - halfWidth)..(item.centerX + halfWidth) &&
             z in (item.centerZ - halfDepth)..(item.centerZ + halfDepth)
     }
+
+    internal fun moveFurniture(id: String, centerX: Float, centerZ: Float): RoomLayout {
+        val index = furniture.indexOfFirst { it.id == id }
+        if (index == -1) return this
+
+        val item = furniture[index]
+        val moved =
+            item.copy(
+                centerX = clampCenter(centerX, item.type.sizeX, width),
+                centerZ = clampCenter(centerZ, item.type.sizeZ, depth),
+            )
+        if (moved == item) return this
+
+        return copy(furniture = furniture.toMutableList().apply { this[index] = moved })
+    }
+}
+
+private fun clampCenter(center: Float, itemSize: Float, roomSize: Float): Float {
+    val halfSize = itemSize / 2
+    return if (itemSize >= roomSize) roomSize / 2
+    else center.coerceIn(halfSize, roomSize - halfSize)
 }
 
 // Position and size along the wall, measured in meters
