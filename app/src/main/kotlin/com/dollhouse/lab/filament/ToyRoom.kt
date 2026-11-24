@@ -1,9 +1,10 @@
 package com.dollhouse.lab.filament
 
+import com.dollhouse.lab.model.Furniture
 import com.dollhouse.lab.model.FurnitureType
 import com.dollhouse.lab.model.RoomLayout
 
-class ToyRoom(val layout: RoomLayout, palette: ToyRoomPalette) {
+class ToyRoom(val layout: RoomLayout, private val palette: ToyRoomPalette) {
     private val door = layout.door
     private val window = layout.window
 
@@ -187,42 +188,41 @@ class ToyRoom(val layout: RoomLayout, palette: ToyRoomPalette) {
             },
         )
 
-    val furnitureBoxes: List<RoomBox> = buildList {
-        for (item in layout.furniture) {
-            val type = item.type
-            val color =
-                when (type) {
-                    FurnitureType.Rug -> palette.mustard
-                    FurnitureType.Bed -> palette.skyBlue
-                    FurnitureType.Wardrobe -> palette.coral
-                }
-            val box =
-                RoomBox(
-                    name = item.id,
-                    minX = item.centerX - type.sizeX / 2,
-                    minY = 0f,
-                    minZ = item.centerZ - type.sizeZ / 2,
-                    sizeX = type.sizeX,
-                    sizeY = type.sizeY,
-                    sizeZ = type.sizeZ,
-                    color = color,
-                )
-            add(box)
-
-            if (type == FurnitureType.Bed) {
-                add(
-                    RoomBox(
-                        name = "pillow",
-                        minX = box.minX + 0.1f,
-                        minY = box.minY + box.sizeY,
-                        minZ = box.minZ + 0.1f,
-                        sizeX = box.sizeX - 0.2f,
-                        sizeY = 0.12f,
-                        sizeZ = 0.4f,
-                        color = palette.warmWhite,
-                    )
-                )
+    // Build each box relative to the furniture center on the floor
+    fun furnitureBoxes(item: Furniture): List<RoomBox> = buildList {
+        val type = item.type
+        val color =
+            when (type) {
+                FurnitureType.Rug -> palette.mustard
+                FurnitureType.Bed -> palette.skyBlue
+                FurnitureType.Wardrobe -> palette.coral
             }
+        val box =
+            RoomBox(
+                name = item.id,
+                minX = -type.sizeX / 2,
+                minY = 0f,
+                minZ = -type.sizeZ / 2,
+                sizeX = type.sizeX,
+                sizeY = type.sizeY,
+                sizeZ = type.sizeZ,
+                color = color,
+            )
+        add(box)
+
+        if (type == FurnitureType.Bed) {
+            add(
+                RoomBox(
+                    name = "pillow",
+                    minX = box.minX + 0.1f,
+                    minY = box.minY + box.sizeY,
+                    minZ = box.minZ + 0.1f,
+                    sizeX = box.sizeX - 0.2f,
+                    sizeY = 0.12f,
+                    sizeZ = 0.4f,
+                    color = palette.warmWhite,
+                )
+            )
         }
     }
 

@@ -1,6 +1,7 @@
 package com.dollhouse.lab.filament
 
 import android.opengl.Matrix
+import com.dollhouse.lab.model.Furniture
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
@@ -25,6 +26,13 @@ class ToyRoomScene(
     room: ToyRoom,
     initialOrbit: OrbitCamera,
 ) : FilamentContent {
+    init {
+        val furniture = room.layout.furniture
+        require(furniture.map { it.id }.toSet().size == furniture.size) {
+            "Furniture IDs must be unique"
+        }
+    }
+
     // Holds the room boxes, lights and background
     private val scene = engine.createScene()
 
@@ -47,6 +55,7 @@ class ToyRoomScene(
     // Keep each box's resources for cleanup
     private val boxEntities = mutableListOf<Int>()
     private val materialInstances = mutableListOf<MaterialInstance>()
+    private val furnitureParents = mutableMapOf<String, Int>()
 
     private class Wall(
         val centerX: Float,
@@ -82,7 +91,7 @@ class ToyRoomScene(
         view.camera = camera
 
         addBox(room.floor)
-        room.furnitureBoxes.forEach { addBox(it) }
+        room.layout.furniture.forEach { item -> addFurniture(item, room.furnitureBoxes(item)) }
 
         addWall(listOf(room.wallLeft), outwardX = -1f, outwardZ = 0f)
         addWall(listOf(room.wallRight), outwardX = 1f, outwardZ = 0f)
@@ -130,11 +139,19 @@ class ToyRoomScene(
                 centerZ = anchor.centerZ,
                 outwardX = outwardX,
                 outwardZ = outwardZ,
-                entities = boxes.map(::addBox).toIntArray(),
+                entities = boxes.map { addBox(it) }.toIntArray(),
             )
     }
 
-    private fun addBox(box: RoomBox): Int {
+    private fun addFurniture(item: Furniture, boxes: List<RoomBox>) {
+        val parent = EntityManager.get().create()
+        val transformManager = engine.transformManager
+        transformManager.create(parent, 0, translationTransform(item.centerX, 0f, item.centerZ))
+        furnitureParents[item.id] = parent
+        boxes.forEach { addBox(it, parent) }
+    }
+
+    private fun addBox(box: RoomBox, parent: Int? = null): Int {
         val instance =
             material.createInstance().apply {
                 setBaseColor(box.color)
@@ -143,6 +160,10 @@ class ToyRoomScene(
         materialInstances += instance
 
         val entity = EntityManager.get().create()
+
+        val transformManager = engine.transformManager
+        val parentInstance = parent?.let(transformManager::getInstance) ?: 0
+        transformManager.create(entity, parentInstance, unitCubeTransform(box))
 
         // Shared geometry, separate material instance
         RenderableManager.Builder(1)
@@ -155,12 +176,6 @@ class ToyRoomScene(
             )
             .material(0, instance)
             .build(engine, entity)
-
-        // The transform stretches the centered unit cube and moves it into place
-        // getInstance gives the manager's handle for this entity's component
-        val transformManager = engine.transformManager
-        transformManager.create(entity)
-        transformManager.setTransform(transformManager.getInstance(entity), unitCubeTransform(box))
 
         scene.addEntity(entity)
         boxEntities += entity
@@ -183,6 +198,12 @@ class ToyRoomScene(
         engine.destroyView(view)
         // Release boxes before their shared geometry and materials
         for (entity in boxEntities) {
+            engine.destroyEntity(entity)
+            EntityManager.get().destroy(entity)
+        }
+
+        // Release furniture parents after the child boxes
+        for (entity in furnitureParents.values) {
             engine.destroyEntity(entity)
             EntityManager.get().destroy(entity)
         }
@@ -218,12 +239,15 @@ class ToyRoomScene(
             lookAt(eye[0], eye[1], eye[2], target[0], target[1], target[2], 0.0, 1.0, 0.0)
         }
 
-        // Column-major matrix that stretches the centered unit cube to the box size and moves it
-        // to the box center. Each Matrix call multiplies on the right, so scale applies first
-        fun unitCubeTransform(box: RoomBox): FloatArray =
+        fun translationTransform(x: Float, y: Float, z: Float): FloatArray =
             FloatArray(16).also {
                 Matrix.setIdentityM(it, 0)
-                Matrix.translateM(it, 0, box.centerX, box.centerY, box.centerZ)
+                Matrix.translateM(it, 0, x, y, z)
+            }
+
+        // Each Matrix call multiplies on the right, so scale applies first
+        fun unitCubeTransform(box: RoomBox): FloatArray =
+            translationTransform(box.centerX, box.centerY, box.centerZ).also {
                 Matrix.scaleM(it, 0, box.sizeX, box.sizeY, box.sizeZ)
             }
     }
