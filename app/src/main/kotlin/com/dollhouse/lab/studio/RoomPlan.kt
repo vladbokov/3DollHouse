@@ -1,6 +1,7 @@
 package com.dollhouse.lab.studio
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -32,9 +34,14 @@ import com.dollhouse.lab.ui.theme.ToyRoomPalette
 private const val GRID_STEP_METERS = 0.5f
 
 @Composable
-internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
+internal fun RoomPlan(
+    layout: RoomLayout,
+    onMoveFurniture: (id: String, centerX: Float, centerZ: Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
     val currentLayout by rememberUpdatedState(layout)
+    val moveFurniture by rememberUpdatedState(onMoveFurniture)
     val paddingPx = with(LocalDensity.current) { 16.dp.toPx() }
     val palette = ToyRoomPalette.fromResources(LocalContext.current)
     val floorColor = Color(palette.wood)
@@ -54,14 +61,43 @@ internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
         )
 
     Canvas(
-        modifier.pointerInput(paddingPx) {
-            detectTapGestures { tap ->
-                val room = currentLayout
-                val transform = PlanTransform.fit(room.width, room.depth, size.toSize(), paddingPx)
-                val roomPoint = transform?.toRoom(tap)
-                selectedFurnitureId = roomPoint?.let { room.furnitureAt(it.x, it.y)?.id }
+        modifier
+            .pointerInput(paddingPx) {
+                detectTapGestures { tap ->
+                    val room = currentLayout
+                    val transform =
+                        PlanTransform.fit(room.width, room.depth, size.toSize(), paddingPx)
+                    val roomPoint = transform?.toRoom(tap)
+                    selectedFurnitureId = roomPoint?.let { room.furnitureAt(it.x, it.y)?.id }
+                }
             }
-        }) {
+            .pointerInput(paddingPx) {
+                var grab: FurnitureGrab? = null
+                detectDragGestures(
+                    orientationLock = null,
+                    onDragStart = start@{ down, _, _ ->
+                            grab = null
+                            val room = currentLayout
+                            val transform =
+                                PlanTransform.fit(room.width, room.depth, size.toSize(), paddingPx)
+                                    ?: return@start
+                            val point = transform.toRoom(down.position)
+                            val item = room.furnitureAt(point.x, point.y) ?: return@start
+                            val grabOffset = point - Offset(item.centerX, item.centerZ)
+                            grab = FurnitureGrab(item.id, down.id, grabOffset, transform)
+                            selectedFurnitureId = item.id
+                        },
+                    onDrag = drag@{ change, _ ->
+                            val activeGrab = grab ?: return@drag
+                            if (change.id != activeGrab.pointerId) return@drag
+                            val center =
+                                activeGrab.transform.toRoom(change.position) - activeGrab.offset
+                            moveFurniture(activeGrab.itemId, center.x, center.y)
+                        },
+                    onDragEnd = { grab = null },
+                    onDragCancel = { grab = null },
+                )
+            }) {
             val transform =
                 PlanTransform.fit(layout.width, layout.depth, size, paddingPx) ?: return@Canvas
 
@@ -114,6 +150,13 @@ internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
         drawWalls(layout, transform, wallColor, outlineColor)
     }
 }
+
+private data class FurnitureGrab(
+    val itemId: String,
+    val pointerId: PointerId,
+    val offset: Offset,
+    val transform: PlanTransform,
+)
 
 private fun DrawScope.drawWalls(
     layout: RoomLayout,
