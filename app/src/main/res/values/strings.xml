@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">3DollHouse</string>
+    <string name="home_title">Dollhouse Lab</string>
+    <string name="filament_lab_title">Filament Lab</string>
+    <string name="lab_status_in_progress">in progress</string>
+    <string name="filament_lab_placeholder">3D scene will appear here</string>
+    <string name="action_back">Back</string>
+</resources>

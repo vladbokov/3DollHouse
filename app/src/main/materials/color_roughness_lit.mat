@@ -1,0 +1,48 @@
+// Material source for painted, non-metallic objects.
+// A mesh describes the shape. A material describes how its surface reacts to light.
+//
+// Android does not load this source directly. The matc tool compiles it into a
+// .filamat package, which we will put in assets/materials and load from Kotlin.
+// Use matc from the same Filament release as the Android library.
+
+// This block declares the material and the parameters available to Kotlin.
+// The syntax resembles JSON, but belongs to Filament's material format.
+material {
+    name : color_roughness_lit,
+
+    // lit uses Filament's lighting model. We describe the surface properties
+    // below, and Filament calculates the lighting. The scene still needs lights.
+    shadingModel : lit,
+
+    // Declaring parameters does not assign their values.
+    // Kotlin will set them on a MaterialInstance, so objects can share this
+    // material while having different colors and roughness values.
+    parameters : [
+        // Three numbers for red, green and blue. Surface color is used in linear space.
+        // Kotlin can use setParameter with RgbType.SRGB to convert an sRGB color.
+        { type : float3, name : baseColor },
+
+        // 0 = smooth with sharp highlights. 1 = rough with broad highlights.
+        { type : float, name : roughness }
+    ]
+}
+
+// This block contains GLSL shader code, which runs on the GPU.
+// A fragment is a candidate contribution to an image pixel.
+fragment {
+    // Filament calls this function to get the surface properties.
+    // inout means we receive MaterialInputs and modify its fields.
+    void material(inout MaterialInputs material) {
+        // Required setup before assigning the surface properties.
+        prepareMaterial(material);
+
+        // Filament exposes our named parameters through materialParams.
+        // Only RGB is changed here. Alpha keeps its default value of 1.
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+
+        // A fixed property rather than a Kotlin parameter.
+        // 0 means non-metal. The material can still have highlights.
+        material.metallic = 0.0;
+    }
+}
