@@ -23,6 +23,7 @@ class ToyRoomScene(
     private val engine: Engine,
     materialData: ByteBuffer,
     room: ToyRoom,
+    initialOrbit: OrbitCamera,
 ) : FilamentContent {
     // Holds the room boxes, lights and background
     private val scene = engine.createScene()
@@ -60,20 +61,12 @@ class ToyRoomScene(
     // Connects the scene, camera and drawing area. This is a Filament View, not an Android View.
     override val view: View = engine.createView()
 
-    var orbit =
-        OrbitCamera(
-            yawDeg = INITIAL_YAW_DEGREES,
-            pitchDeg = INITIAL_PITCH_DEGREES,
-            distance = INITIAL_DISTANCE_METERS,
-        )
-        private set
-
     init {
         scene.skybox = skybox
         scene.indirectLight = ambientLight
         view.scene = scene
         view.camera = camera
-        setCamera(orbit)
+        setCamera(initialOrbit)
 
     addBox(room.floor)
     addBox(room.bed)
@@ -97,9 +90,8 @@ class ToyRoomScene(
     }
 
     fun setCamera(orbit: OrbitCamera) {
-        this.orbit = orbit
         camera.lookAt(eye = orbit.eye(CAMERA_TARGET), target = CAMERA_TARGET)
-  }
+    }
 
   private fun addBox(box: RoomBox) {
     val instance =
@@ -174,10 +166,7 @@ class ToyRoomScene(
         const val NEAR_METERS = 0.1
         const val FAR_METERS = 50.0
 
-        // Start above the front wall and aim at the center of the floor
-        const val INITIAL_YAW_DEGREES = 0.0
-        const val INITIAL_PITCH_DEGREES = 49.4
-        const val INITIAL_DISTANCE_METERS = 9.22
+        // Aim at the center of the floor
         val CAMERA_TARGET = doubleArrayOf(ToyRoom.WIDTH / 2.0, 0.0, ToyRoom.DEPTH / 2.0)
 
         // Filament expects a unit vector
