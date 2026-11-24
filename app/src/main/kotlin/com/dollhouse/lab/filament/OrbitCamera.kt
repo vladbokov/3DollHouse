@@ -14,6 +14,9 @@ data class OrbitCamera(
             pitchDeg = (pitchDeg + deltaPitchDeg).coerceIn(MIN_PITCH_DEGREES, MAX_PITCH_DEGREES),
         )
 
+    fun zoom(zoomFactor: Float): OrbitCamera =
+        copy(distance = (distance / zoomFactor).coerceIn(MIN_DISTANCE_METERS, MAX_DISTANCE_METERS))
+
     fun eye(target: DoubleArray): DoubleArray {
         val yaw = Math.toRadians(yawDeg)
         val pitch = Math.toRadians(pitchDeg)
@@ -34,5 +37,8 @@ data class OrbitCamera(
         // Stay above the floor and avoid looking straight down along the up axis
         const val MIN_PITCH_DEGREES = 5.0
         const val MAX_PITCH_DEGREES = 85.0
+
+        const val MIN_DISTANCE_METERS = 3.0
+        const val MAX_DISTANCE_METERS = 15.0
     }
 }

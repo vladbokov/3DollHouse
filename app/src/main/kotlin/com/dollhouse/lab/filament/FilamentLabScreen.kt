@@ -113,12 +113,14 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
     Box(
         modifier =
             modifier.pointerInput(scene) {
-                detectTransformGestures { _, pan, _, _ ->
+                detectTransformGestures { _, pan, zoom, _ ->
                     scene.setCamera(
-                        scene.orbit.rotate(
-                            deltaYawDeg = -pan.x * DEGREES_PER_PIXEL,
-                            deltaPitchDeg = pan.y * DEGREES_PER_PIXEL,
-                        ),
+                        scene.orbit
+                            .rotate(
+                                deltaYawDeg = -pan.x * DEGREES_PER_PIXEL,
+                                deltaPitchDeg = pan.y * DEGREES_PER_PIXEL,
+                            )
+                            .zoom(zoom),
                     )
                 }
             },
