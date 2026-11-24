@@ -16,18 +16,31 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dollhouse.lab.R
+import com.dollhouse.lab.model.RoomLayout
 import com.dollhouse.lab.model.defaultRoomLayout
+
+private val RoomLayoutSaver =
+    listSaver<RoomLayout, Any>(
+        save = { layout -> layout.furniture.flatMap { listOf(it.id, it.centerX, it.centerZ) } },
+        restore = { saved ->
+            saved.chunked(3).fold(defaultRoomLayout) { layout, (id, centerX, centerZ) ->
+                layout.moveFurniture(id as String, centerX as Float, centerZ as Float)
+            }
+        },
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
-    var layout by remember { mutableStateOf(defaultRoomLayout) }
+    var layout by
+        rememberSaveable(stateSaver = RoomLayoutSaver) { mutableStateOf(defaultRoomLayout) }
 
     Column(modifier.fillMaxSize()) {
         TopAppBar(
