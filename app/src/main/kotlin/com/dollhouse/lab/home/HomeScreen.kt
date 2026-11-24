@@ -21,7 +21,11 @@ import com.dollhouse.lab.R
 import com.dollhouse.lab.ui.theme.DollhouseTheme
 
 @Composable
-fun HomeScreen(onOpenFilamentLab: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    onOpenFilamentLab: () -> Unit,
+    onOpenRoomStudio: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.safeDrawingPadding().padding(16.dp),
@@ -33,8 +37,13 @@ fun HomeScreen(onOpenFilamentLab: () -> Unit, modifier: Modifier = Modifier) {
             )
             LabCard(
                 title = stringResource(R.string.filament_lab_title),
-                status = stringResource(R.string.lab_status_in_progress),
+                status = stringResource(R.string.lab_status_ready),
                 onClick = onOpenFilamentLab,
+            )
+            LabCard(
+                title = stringResource(R.string.room_studio_title),
+                status = stringResource(R.string.lab_status_in_progress),
+                onClick = onOpenRoomStudio,
             )
         }
     }
@@ -70,5 +79,5 @@ private fun LabCard(
 @Preview(showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
-    DollhouseTheme { HomeScreen(onOpenFilamentLab = {}) }
+    DollhouseTheme { HomeScreen(onOpenFilamentLab = {}, onOpenRoomStudio = {}) }
 }

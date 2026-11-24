@@ -1,7 +1,8 @@
 package com.dollhouse.lab
 
-/** Flat navigation: Home -> Lab -> back. The selected screen is stored as Compose state. */
+/** Destinations for flat navigation from Home */
 internal enum class Screen {
     Home,
     FilamentLab,
+    RoomStudio,
 }
