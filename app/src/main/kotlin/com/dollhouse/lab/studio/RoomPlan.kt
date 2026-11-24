@@ -1,8 +1,14 @@
 package com.dollhouse.lab.studio
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -10,11 +16,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import com.dollhouse.lab.R
 import com.dollhouse.lab.model.FurnitureType
 import com.dollhouse.lab.model.RoomLayout
@@ -24,6 +33,9 @@ private const val GRID_STEP_METERS = 0.5f
 
 @Composable
 internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
+    var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
+    val currentLayout by rememberUpdatedState(layout)
+    val paddingPx = with(LocalDensity.current) { 16.dp.toPx() }
     val palette = ToyRoomPalette.fromResources(LocalContext.current)
     val floorColor = Color(palette.wood)
     val wallColor = Color(palette.warmWhite)
@@ -41,10 +53,17 @@ internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
                 textMeasurer.measure(stringResource(R.string.room_plan_wardrobe), labelStyle),
         )
 
-    Canvas(modifier) {
-        val transform =
-            PlanTransform.fit(layout.width, layout.depth, size, paddingPx = 16.dp.toPx())
-                ?: return@Canvas
+    Canvas(
+        modifier.pointerInput(paddingPx) {
+            detectTapGestures { tap ->
+                val room = currentLayout
+                val transform = PlanTransform.fit(room.width, room.depth, size.toSize(), paddingPx)
+                val roomPoint = transform?.toRoom(tap)
+                selectedFurnitureId = roomPoint?.let { room.furnitureAt(it.x, it.y)?.id }
+            }
+        }) {
+            val transform =
+                PlanTransform.fit(layout.width, layout.depth, size, paddingPx) ?: return@Canvas
 
         drawRect(
             color = floorColor,
@@ -73,6 +92,14 @@ internal fun RoomPlan(layout: RoomLayout, modifier: Modifier = Modifier) {
                 topLeft = topLeft,
                 size = itemSize,
             )
+                if (item.id == selectedFurnitureId) {
+                    drawRect(
+                        color = outlineColor,
+                        topLeft = topLeft,
+                        size = itemSize,
+                        style = Stroke(width = 3.dp.toPx()),
+                    )
+                }
 
             val label = labels.getValue(item.type)
             if (label.size.width <= itemSize.width && label.size.height <= itemSize.height) {

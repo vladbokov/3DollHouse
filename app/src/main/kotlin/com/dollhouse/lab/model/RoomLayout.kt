@@ -7,7 +7,14 @@ data class RoomLayout(
     val door: Opening,
     val window: Opening,
     val furniture: List<Furniture>,
-)
+) {
+    internal fun furnitureAt(x: Float, z: Float): Furniture? = furniture.lastOrNull { item ->
+        val halfWidth = item.type.sizeX / 2
+        val halfDepth = item.type.sizeZ / 2
+        x in (item.centerX - halfWidth)..(item.centerX + halfWidth) &&
+            z in (item.centerZ - halfDepth)..(item.centerZ + halfDepth)
+    }
+}
 
 // Position and size along the wall, measured in meters
 data class Opening(val minX: Float, val minY: Float, val width: Float, val height: Float)
