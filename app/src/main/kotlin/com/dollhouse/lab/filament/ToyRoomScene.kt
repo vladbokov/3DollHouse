@@ -45,6 +45,17 @@ class ToyRoomScene(
   private val boxEntities = mutableListOf<Int>()
   private val materialInstances = mutableListOf<MaterialInstance>()
 
+    private class Wall(
+        val centerX: Float,
+        val centerZ: Float,
+        val outwardX: Float,
+        val outwardZ: Float,
+        val entities: IntArray,
+        var visible: Boolean = true,
+    )
+
+    private val walls = mutableListOf<Wall>()
+
     // Unit cube geometry, scaled into each room box
     private val boxMesh = BoxMesh(engine)
 
@@ -66,18 +77,18 @@ class ToyRoomScene(
         scene.indirectLight = ambientLight
         view.scene = scene
         view.camera = camera
-        setCamera(initialOrbit)
 
     addBox(room.floor)
     addBox(room.bed)
     addBox(room.pillow)
     addBox(room.wardrobe)
     addBox(room.rug)
-    addBox(room.wallLeft)
-    addBox(room.wallRight)
-    room.wallBackParts.forEach { addBox(it) }
-    room.windowFrameParts.forEach { addBox(it) }
-    room.wallFrontParts.forEach { addBox(it) }
+
+        addWall(listOf(room.wallLeft), outwardX = -1f, outwardZ = 0f)
+        addWall(listOf(room.wallRight), outwardX = 1f, outwardZ = 0f)
+        addWall(room.wallBackParts + room.windowFrameParts, outwardX = 0f, outwardZ = -1f)
+        addWall(room.wallFrontParts, outwardX = 0f, outwardZ = 1f)
+        setCamera(initialOrbit)
 
     // Parallel rays like sunlight, coming from above and in front, slightly from the right
     LightManager.Builder(LightManager.Type.DIRECTIONAL)
@@ -90,10 +101,40 @@ class ToyRoomScene(
     }
 
     fun setCamera(orbit: OrbitCamera) {
-        camera.lookAt(eye = orbit.eye(CAMERA_TARGET), target = CAMERA_TARGET)
+        val eye = orbit.eye(CAMERA_TARGET)
+        camera.lookAt(eye = eye, target = CAMERA_TARGET)
+
+        for (wall in walls) {
+            // A positive dot product puts the camera on the outer side of the wall
+            val cameraOutside =
+                (eye[0] - wall.centerX) * wall.outwardX + (eye[2] - wall.centerZ) * wall.outwardZ >
+                    0.0
+            val visible = !cameraOutside
+            if (visible == wall.visible) continue
+
+            if (visible) {
+                scene.addEntities(wall.entities)
+            } else {
+                scene.removeEntities(wall.entities)
+            }
+            wall.visible = visible
+        }
     }
 
-  private fun addBox(box: RoomBox) {
+    private fun addWall(boxes: List<RoomBox>, outwardX: Float, outwardZ: Float) {
+        // The first box is a wall segment, so its center lies on the wall's midplane
+        val anchor = boxes.first()
+        walls +=
+            Wall(
+                centerX = anchor.centerX,
+                centerZ = anchor.centerZ,
+                outwardX = outwardX,
+                outwardZ = outwardZ,
+                entities = boxes.map(::addBox).toIntArray(),
+            )
+    }
+
+    private fun addBox(box: RoomBox): Int {
     val instance =
         material.createInstance().apply {
           setBaseColor(box.color)
@@ -126,6 +167,7 @@ class ToyRoomScene(
 
     scene.addEntity(entity)
     boxEntities += entity
+        return entity
     }
 
     /** Updates the drawing area when the surface changes size. Width and height are in pixels. */
