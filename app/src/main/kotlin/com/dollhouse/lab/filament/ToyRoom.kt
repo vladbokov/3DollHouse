@@ -3,6 +3,7 @@ package com.dollhouse.lab.filament
 import com.dollhouse.lab.model.Furniture
 import com.dollhouse.lab.model.FurnitureType
 import com.dollhouse.lab.model.RoomLayout
+import com.dollhouse.lab.ui.theme.ToyRoomPalette
 
 class ToyRoom(val layout: RoomLayout, private val palette: ToyRoomPalette) {
     private val door = layout.door
