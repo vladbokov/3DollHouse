@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.dollhouse.lab.filament.FilamentLabScreen
 import com.dollhouse.lab.home.HomeScreen
+import com.dollhouse.lab.studio.RoomStudioScreen
 import com.dollhouse.lab.ui.theme.DollhouseTheme
 
 class MainActivity : ComponentActivity() {
@@ -26,8 +27,13 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = screen != Screen.Home, onBack = goHome)
 
                 when (screen) {
-                    Screen.Home -> HomeScreen(onOpenFilamentLab = { screen = Screen.FilamentLab })
+                    Screen.Home ->
+                        HomeScreen(
+                            onOpenFilamentLab = { screen = Screen.FilamentLab },
+                            onOpenRoomStudio = { screen = Screen.RoomStudio },
+                        )
                     Screen.FilamentLab -> FilamentLabScreen(onBack = goHome)
+                    Screen.RoomStudio -> RoomStudioScreen(onBack = goHome)
                 }
             }
         }

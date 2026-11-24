@@ -1,6 +1,7 @@
 package com.dollhouse.lab.filament
 
 import android.opengl.Matrix
+import com.dollhouse.lab.model.Furniture
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
@@ -25,6 +26,13 @@ class ToyRoomScene(
     room: ToyRoom,
     initialOrbit: OrbitCamera,
 ) : FilamentContent {
+    init {
+        val furniture = room.layout.furniture
+        require(furniture.map { it.id }.toSet().size == furniture.size) {
+            "Furniture IDs must be unique"
+        }
+    }
+
     // Holds the room boxes, lights and background
     private val scene = engine.createScene()
 
@@ -34,6 +42,9 @@ class ToyRoomScene(
     // Defines where we look from and how 3D projects onto the screen.
     private val camera = engine.createCamera(cameraEntity)
 
+    // Aim at the center of the floor
+    private val cameraTarget = doubleArrayOf(room.layout.width / 2.0, 0.0, room.layout.depth / 2.0)
+
     // Solid background color in linear RGBA. This does not light the objects.
     private val skybox = Skybox.Builder().color(0.21f, 0.64f, 0.49f, 1f).build(engine)
 
@@ -41,9 +52,10 @@ class ToyRoomScene(
     private val material =
         Material.Builder().payload(materialData, materialData.remaining()).build(engine)
 
-  // Keep each box's resources for cleanup
-  private val boxEntities = mutableListOf<Int>()
-  private val materialInstances = mutableListOf<MaterialInstance>()
+    // Keep each box's resources for cleanup
+    private val boxEntities = mutableListOf<Int>()
+    private val materialInstances = mutableListOf<MaterialInstance>()
+    private val furnitureParents = mutableMapOf<String, Int>()
 
     private class Wall(
         val centerX: Float,
@@ -78,11 +90,8 @@ class ToyRoomScene(
         view.scene = scene
         view.camera = camera
 
-    addBox(room.floor)
-    addBox(room.bed)
-    addBox(room.pillow)
-    addBox(room.wardrobe)
-    addBox(room.rug)
+        addBox(room.floor)
+        room.layout.furniture.forEach { item -> addFurniture(item, room.furnitureBoxes(item)) }
 
         addWall(listOf(room.wallLeft), outwardX = -1f, outwardZ = 0f)
         addWall(listOf(room.wallRight), outwardX = 1f, outwardZ = 0f)
@@ -90,19 +99,19 @@ class ToyRoomScene(
         addWall(room.wallFrontParts, outwardX = 0f, outwardZ = 1f)
         setCamera(initialOrbit)
 
-    // Parallel rays like sunlight, coming from above and in front, slightly from the right
-    LightManager.Builder(LightManager.Type.DIRECTIONAL)
-        .color(1f, 0.96f, 0.9f)
-        .intensity(100_000f)
-        .direction(SUN_DIRECTION[0], SUN_DIRECTION[1], SUN_DIRECTION[2])
-        .build(engine, sunEntity)
+        // Parallel rays like sunlight, coming from above and in front, slightly from the right
+        LightManager.Builder(LightManager.Type.DIRECTIONAL)
+            .color(1f, 0.96f, 0.9f)
+            .intensity(100_000f)
+            .direction(SUN_DIRECTION[0], SUN_DIRECTION[1], SUN_DIRECTION[2])
+            .build(engine, sunEntity)
 
-    scene.addEntity(sunEntity)
+        scene.addEntity(sunEntity)
     }
 
     fun setCamera(orbit: OrbitCamera) {
-        val eye = orbit.eye(CAMERA_TARGET)
-        camera.lookAt(eye = eye, target = CAMERA_TARGET)
+        val eye = orbit.eye(cameraTarget)
+        camera.lookAt(eye = eye, target = cameraTarget)
 
         for (wall in walls) {
             // A positive dot product puts the camera on the outer side of the wall
@@ -130,44 +139,47 @@ class ToyRoomScene(
                 centerZ = anchor.centerZ,
                 outwardX = outwardX,
                 outwardZ = outwardZ,
-                entities = boxes.map(::addBox).toIntArray(),
+                entities = boxes.map { addBox(it) }.toIntArray(),
             )
     }
 
-    private fun addBox(box: RoomBox): Int {
-    val instance =
-        material.createInstance().apply {
-          setBaseColor(box.color)
-          setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
-        }
-    materialInstances += instance
+    private fun addFurniture(item: Furniture, boxes: List<RoomBox>) {
+        val parent = EntityManager.get().create()
+        val transformManager = engine.transformManager
+        transformManager.create(parent, 0, translationTransform(item.centerX, 0f, item.centerZ))
+        furnitureParents[item.id] = parent
+        boxes.forEach { addBox(it, parent) }
+    }
 
-    val entity = EntityManager.get().create()
+    private fun addBox(box: RoomBox, parent: Int? = null): Int {
+        val instance =
+            material.createInstance().apply {
+                setBaseColor(box.color)
+                setParameter(ColorRoughnessLit.ROUGHNESS, 0.7f)
+            }
+        materialInstances += instance
 
-    // Shared geometry, separate material instance
-    RenderableManager.Builder(1)
-        .boundingBox(boxMesh.boundingBox)
-        .geometry(
-            0,
-            RenderableManager.PrimitiveType.TRIANGLES,
-            boxMesh.vertexBuffer,
-            boxMesh.indexBuffer,
-        )
-        .material(0, instance)
-        .build(engine, entity)
+        val entity = EntityManager.get().create()
 
-    // The transform stretches the centered unit cube and moves it into place
-    // getInstance gives the manager's handle for this entity's component
-    val transformManager = engine.transformManager
-    transformManager.create(entity)
-    transformManager.setTransform(
-        transformManager.getInstance(entity),
-        unitCubeTransform(box),
-    )
+        val transformManager = engine.transformManager
+        val parentInstance = parent?.let(transformManager::getInstance) ?: 0
+        transformManager.create(entity, parentInstance, unitCubeTransform(box))
 
-    scene.addEntity(entity)
-    boxEntities += entity
-    return entity
+        // Shared geometry, separate material instance
+        RenderableManager.Builder(1)
+            .boundingBox(boxMesh.boundingBox)
+            .geometry(
+                0,
+                RenderableManager.PrimitiveType.TRIANGLES,
+                boxMesh.vertexBuffer,
+                boxMesh.indexBuffer,
+            )
+            .material(0, instance)
+            .build(engine, entity)
+
+        scene.addEntity(entity)
+        boxEntities += entity
+        return entity
     }
 
     /** Updates the drawing area when the surface changes size. Width and height are in pixels. */
@@ -184,18 +196,24 @@ class ToyRoomScene(
     override fun destroy() {
         // Native resources need explicit cleanup. Release the View before the objects it uses.
         engine.destroyView(view)
-    // Release boxes before their shared geometry and materials
-    for (entity in boxEntities) {
-      engine.destroyEntity(entity)
-      EntityManager.get().destroy(entity)
-    }
+        // Release boxes before their shared geometry and materials
+        for (entity in boxEntities) {
+            engine.destroyEntity(entity)
+            EntityManager.get().destroy(entity)
+        }
+
+        // Release furniture parents after the child boxes
+        for (entity in furnitureParents.values) {
+            engine.destroyEntity(entity)
+            EntityManager.get().destroy(entity)
+        }
 
         boxMesh.destroy(engine)
         engine.destroyEntity(sunEntity)
         EntityManager.get().destroy(sunEntity)
         engine.destroyScene(scene)
         engine.destroyIndirectLight(ambientLight)
-    materialInstances.forEach { engine.destroyMaterialInstance(it) }
+        materialInstances.forEach { engine.destroyMaterialInstance(it) }
         engine.destroyMaterial(material)
         engine.destroySkybox(skybox)
         // The camera component and its entity ID are released separately.
@@ -207,9 +225,6 @@ class ToyRoomScene(
         const val FOV_DEGREES = 45.0
         const val NEAR_METERS = 0.1
         const val FAR_METERS = 50.0
-
-        // Aim at the center of the floor
-        val CAMERA_TARGET = doubleArrayOf(ToyRoom.WIDTH / 2.0, 0.0, ToyRoom.DEPTH / 2.0)
 
         // Filament expects a unit vector
         val SUN_DIRECTION = normalized(-0.5f, -1f, -0.6f)
@@ -224,12 +239,15 @@ class ToyRoomScene(
             lookAt(eye[0], eye[1], eye[2], target[0], target[1], target[2], 0.0, 1.0, 0.0)
         }
 
-        // Column-major matrix that stretches the centered unit cube to the box size and moves it
-        // to the box center. Each Matrix call multiplies on the right, so scale applies first
-        fun unitCubeTransform(box: RoomBox): FloatArray =
+        fun translationTransform(x: Float, y: Float, z: Float): FloatArray =
             FloatArray(16).also {
                 Matrix.setIdentityM(it, 0)
-                Matrix.translateM(it, 0, box.centerX, box.centerY, box.centerZ)
+                Matrix.translateM(it, 0, x, y, z)
+            }
+
+        // Each Matrix call multiplies on the right, so scale applies first
+        fun unitCubeTransform(box: RoomBox): FloatArray =
+            translationTransform(box.centerX, box.centerY, box.centerZ).also {
                 Matrix.scaleM(it, 0, box.sizeX, box.sizeY, box.sizeZ)
             }
     }

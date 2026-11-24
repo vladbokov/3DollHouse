@@ -41,12 +41,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dollhouse.lab.R
+import com.dollhouse.lab.model.defaultRoomLayout
 import com.dollhouse.lab.ui.theme.DollhouseTheme
+import com.dollhouse.lab.ui.theme.ToyRoomPalette
 import com.google.android.filament.Engine
 
 private const val DEGREES_PER_PIXEL = 0.25
@@ -212,16 +213,8 @@ private fun FilamentSurface(
 
     // Keep the Engine and scene across recompositions.
     val filamentHost = remember {
-        // Resolve resource IDs before passing colors to the room model
-        val palette =
-            ToyRoomPalette(
-                wood = ContextCompat.getColor(context, R.color.room_wood),
-                warmWhite = ContextCompat.getColor(context, R.color.room_warm_white),
-                skyBlue = ContextCompat.getColor(context, R.color.room_sky_blue),
-                coral = ContextCompat.getColor(context, R.color.room_coral),
-                mustard = ContextCompat.getColor(context, R.color.room_mustard),
-            )
-        val room = ToyRoom(palette)
+        val palette = ToyRoomPalette.fromResources(context)
+        val room = ToyRoom(defaultRoomLayout, palette)
         FilamentHost(context, requestedBackend) { engine ->
             ToyRoomScene(
                 engine,
