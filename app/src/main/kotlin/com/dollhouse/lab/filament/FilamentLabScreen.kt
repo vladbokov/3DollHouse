@@ -1,5 +1,6 @@
 package com.dollhouse.lab.filament
 
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
@@ -26,6 +28,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dollhouse.lab.R
 import com.dollhouse.lab.ui.theme.DollhouseTheme
+
+private const val DEGREES_PER_PIXEL = 0.25
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +109,25 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
         }
     }
 
-    AndroidView(factory = { filamentHost.surfaceView }, modifier = modifier)
+    val scene = filamentHost.content
+    Box(
+        modifier =
+            modifier.pointerInput(scene) {
+                detectTransformGestures { _, pan, _, _ ->
+                    scene.setCamera(
+                        scene.orbit.rotate(
+                            deltaYawDeg = -pan.x * DEGREES_PER_PIXEL,
+                            deltaPitchDeg = pan.y * DEGREES_PER_PIXEL,
+                        ),
+                    )
+                }
+            },
+    ) {
+        AndroidView(
+            factory = { filamentHost.surfaceView },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
 
 @Preview(showBackground = true)
