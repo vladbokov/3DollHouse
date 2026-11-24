@@ -1,5 +1,6 @@
 package com.dollhouse.lab.filament
 
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,9 +12,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
@@ -26,6 +34,19 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dollhouse.lab.R
 import com.dollhouse.lab.ui.theme.DollhouseTheme
+
+private const val DEGREES_PER_PIXEL = 0.25
+
+// Start above the front wall
+private const val INITIAL_YAW_DEGREES = 0.0
+private const val INITIAL_PITCH_DEGREES = 49.4
+private const val INITIAL_DISTANCE_METERS = 9.22
+
+private val OrbitSaver =
+    listSaver<OrbitCamera, Double>(
+        save = { listOf(it.yawDeg, it.pitchDeg, it.distance) },
+        restore = { (yaw, pitch, distance) -> OrbitCamera(yaw, pitch, distance) },
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +83,18 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
+    // Restore the camera pose when Android recreates the screen
+    var orbit by
+        rememberSaveable(stateSaver = OrbitSaver) {
+            mutableStateOf(
+                OrbitCamera(
+                    yawDeg = INITIAL_YAW_DEGREES,
+                    pitchDeg = INITIAL_PITCH_DEGREES,
+                    distance = INITIAL_DISTANCE_METERS,
+                ),
+            )
+        }
+
     // Keep the Engine and scene across recompositions.
     val filamentHost = remember {
     // Resolve resource IDs before passing colors to the room model
@@ -75,11 +108,12 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
         )
     val room = ToyRoom(palette)
         FilamentHost(context) { engine ->
-      ToyRoomScene(
-          engine,
-          context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH),
-          room,
-      )
+            ToyRoomScene(
+                engine,
+                context.assets.readDirectBuffer(ColorRoughnessLit.ASSET_PATH),
+                room,
+                initialOrbit = orbit,
+            )
         }
     }
 
@@ -105,7 +139,28 @@ private fun FilamentSurface(modifier: Modifier = Modifier) {
         }
     }
 
-    AndroidView(factory = { filamentHost.surfaceView }, modifier = modifier)
+    val scene = filamentHost.content
+    LaunchedEffect(scene, orbit) { scene.setCamera(orbit) }
+
+    Box(
+        modifier =
+            modifier.pointerInput(scene) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    orbit =
+                        orbit
+                            .rotate(
+                                deltaYawDeg = -pan.x * DEGREES_PER_PIXEL,
+                                deltaPitchDeg = pan.y * DEGREES_PER_PIXEL,
+                            )
+                            .zoom(zoom)
+                }
+            },
+    ) {
+        AndroidView(
+            factory = { filamentHost.surfaceView },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
 
 @Preview(showBackground = true)
