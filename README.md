@@ -8,7 +8,7 @@ furnished 3 × 4 m room and compare the OpenGL ES and Vulkan backends, or open
 room follow.
 
 <p align="center">
-  <img src="docs/filament-lab.gif" alt="Orbiting around the toy room in Filament Lab" width="320">
+  <img src="docs/room-studio.gif" alt="Dragging the bed on the floor plan moves the bed and pillow in the 3D room" width="320">
 </p>
 
 ## Requirements
@@ -24,45 +24,13 @@ room follow.
 ./gradlew installDebug
 ```
 
-Then launch **3DollHouse** and open **Room Studio** or **Filament Lab**.
-
-## Room Studio
-
-Drag furniture on the 2D floor plan to move it in the 3D room as you drag.
-Drag in the 3D view to orbit the room, or pinch to zoom. The room and plan
-stack in portrait and sit side by side in landscape.
-
-<p align="center">
-  <img src="docs/room-studio.gif" alt="Dragging the bed on the floor plan moves the bed and pillow in the 3D room" width="320">
-</p>
-
-<details>
-<summary><b>How Room Studio was built</b></summary>
-
-1. **Give the room one model.** `RoomLayout` describes dimensions, door and
-   window openings, and furniture positions in meters. Both views use it.
-2. **Group furniture in 3D.** The bed and pillow share a parent transform,
-   so moving the parent moves both parts together.
-3. **Draw the floor plan.** `PlanTransform` converts between room meters and
-   Canvas pixels. Tests cover the round trip and fitting the plan in portrait
-   and landscape.
-4. **Add walls, openings, and furniture.** The Canvas and Filament views use
-   the same room palette.
-5. **Select and drag furniture.** A tap selects the topmost item under the
-   finger. Dragging keeps the initial grab offset and clamps the item to the
-   room bounds.
-6. **Restore the layout after rotation.** `rememberSaveable` stores furniture
-   IDs and their center coordinates.
-7. **Bring 3D into Room Studio.** Extracting `FilamentSurface` lets both screens
-   reuse it. Room Studio places it beside the plan in landscape and above it
-   in portrait, with a camera position that survives rotation.
-8. **Link the plan to the scene.** A drag updates `RoomLayout`. Filament applies
-   the new positions to existing parent transforms while keeping the scene
-   alive.
-
-</details>
+Then launch **3DollHouse** and open **Filament Lab** or **Room Studio**.
 
 ## Filament Lab
+
+<p align="center">
+  <img src="docs/filament-lab.gif" alt="Orbiting around the toy room in Filament Lab" width="320">
+</p>
 
 - **Drag to orbit, pinch to zoom.** Walls between the camera and the room hide automatically.
 - **Switch between OpenGL ES and Vulkan.** The view keeps its camera angle and zoom.
@@ -111,6 +79,42 @@ The project grew one commit at a time. Each step below is something I had to fig
     camera pose is preserved. The active backend is reported, including a fallback.
 13. **Frame statistics.** FPS is measured from rendered frames. GPU time comes from
     Filament frame info when the driver provides it.
+
+</details>
+
+## Room Studio
+
+Drag furniture on the 2D floor plan to move it in the 3D room as you drag.
+Drag in the 3D view to orbit the room, or pinch to zoom. The room and plan
+stack in portrait and sit side by side in landscape.
+
+<p align="center">
+  <img src="docs/room-studio.gif" alt="Dragging the bed on the floor plan moves the bed and pillow in the 3D room" width="320">
+</p>
+
+<details>
+<summary><b>How Room Studio was built</b></summary>
+
+1. **Give the room one model.** `RoomLayout` describes dimensions, door and
+   window openings, and furniture positions in meters. Both views use it.
+2. **Group furniture in 3D.** The bed and pillow share a parent transform,
+   so moving the parent moves both parts together.
+3. **Draw the floor plan.** `PlanTransform` converts between room meters and
+   Canvas pixels. Tests cover the round trip and fitting the plan in portrait
+   and landscape.
+4. **Add walls, openings, and furniture.** The Canvas and Filament views use
+   the same room palette.
+5. **Select and drag furniture.** A tap selects the topmost item under the
+   finger. Dragging keeps the initial grab offset and clamps the item to the
+   room bounds.
+6. **Restore the layout after rotation.** `rememberSaveable` stores furniture
+   IDs and their center coordinates.
+7. **Bring 3D into Room Studio.** Extracting `FilamentSurface` lets both screens
+   reuse it. Room Studio places it beside the plan in landscape and above it
+   in portrait, with a camera position that survives rotation.
+8. **Link the plan to the scene.** A drag updates `RoomLayout`. Filament applies
+   the new positions to existing parent transforms while keeping the scene
+   alive.
 
 </details>
 
