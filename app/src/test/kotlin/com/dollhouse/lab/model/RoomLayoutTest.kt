@@ -41,11 +41,42 @@ class RoomLayoutTest {
 
     @Test
     fun `a bed wider than the room is centered across its width`() {
-        val narrowRoom = defaultRoomLayout.copy(width = 0.5f)
+        val bed = Furniture("bed", FurnitureType.Bed, centerX = 0.25f, centerZ = 2f)
+        val narrowRoom =
+            defaultRoomLayout.copy(
+                width = 0.5f,
+                door = Opening(minX = 0f, minY = 0f, width = 0.4f, height = 2f),
+                window = Opening(minX = 0f, minY = 0.9f, width = 0.4f, height = 1f),
+                furniture = listOf(bed),
+            )
         val moved = narrowRoom.moveFurniture("bed", centerX = 1f, centerZ = 2f)
-        val bed = moved.furniture.first { it.id == "bed" }
+        val movedBed = moved.furniture.first { it.id == "bed" }
 
-        assertEquals(0.25f, bed.centerX, 0.0001f)
-        assertEquals(2f, bed.centerZ, 0.0001f)
+        assertEquals(0.25f, movedBed.centerX, 0.0001f)
+        assertEquals(2f, movedBed.centerZ, 0.0001f)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `duplicate furniture ids are rejected`() {
+        val rug = defaultRoomLayout.furniture.first()
+        defaultRoomLayout.copy(furniture = listOf(rug, rug))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `furniture outside the room is rejected`() {
+        val bed = Furniture("bed", FurnitureType.Bed, centerX = -1f, centerZ = 2f)
+        defaultRoomLayout.copy(furniture = listOf(bed))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `a window wider than the wall is rejected`() {
+        defaultRoomLayout.copy(
+            window = Opening(minX = 2.5f, minY = 0.9f, width = 1.2f, height = 1f)
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `a room without positive size is rejected`() {
+        defaultRoomLayout.copy(depth = 0f)
     }
 }

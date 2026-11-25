@@ -32,7 +32,7 @@ import com.dollhouse.lab.filament.applyGesture
 import com.dollhouse.lab.filament.rememberRoomOrbitCamera
 import com.dollhouse.lab.model.RoomLayout
 import com.dollhouse.lab.model.defaultRoomLayout
-import com.google.android.filament.Engine
+import com.dollhouse.lab.ui.theme.rememberToyRoomPalette
 
 private val RoomLayoutSaver =
     listSaver<RoomLayout, Any>(
@@ -50,18 +50,20 @@ internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier)
     var layout by
         rememberSaveable(stateSaver = RoomLayoutSaver) { mutableStateOf(defaultRoomLayout) }
     var orbit by rememberRoomOrbitCamera()
+    val palette = rememberToyRoomPalette()
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val panels: @Composable (Modifier) -> Unit = { panelModifier ->
         FilamentSurface(
             layout = layout,
-            requestedBackend = Engine.Backend.OPENGL,
+            palette = palette,
             orbit = orbit,
             onCameraGesture = { pan, zoom -> orbit = orbit.applyGesture(pan, zoom) },
             modifier = panelModifier,
         )
         RoomPlan(
             layout = layout,
+            palette = palette,
             onMoveFurniture = { id, centerX, centerZ ->
                 layout = layout.moveFurniture(id, centerX, centerZ)
             },
@@ -86,7 +88,9 @@ internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier)
                 .fillMaxWidth()
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                    )
+                )
         if (isLandscape) {
             Row(contentModifier) { panels(Modifier.weight(1f).fillMaxHeight()) }
         } else {

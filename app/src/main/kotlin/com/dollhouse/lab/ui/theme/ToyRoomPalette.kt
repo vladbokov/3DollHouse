@@ -1,6 +1,9 @@
 package com.dollhouse.lab.ui.theme
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.dollhouse.lab.R
 import com.dollhouse.lab.model.FurnitureType
@@ -30,4 +33,11 @@ data class ToyRoomPalette(
                 mustard = ContextCompat.getColor(context, R.color.room_mustard),
             )
     }
+}
+
+// Resolved once per composition, so screens pass colors down instead of Context
+@Composable
+fun rememberToyRoomPalette(): ToyRoomPalette {
+    val context = LocalContext.current
+    return remember(context) { ToyRoomPalette.fromResources(context) }
 }

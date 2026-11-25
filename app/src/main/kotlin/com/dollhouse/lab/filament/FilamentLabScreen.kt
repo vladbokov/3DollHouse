@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.dollhouse.lab.R
 import com.dollhouse.lab.model.defaultRoomLayout
 import com.dollhouse.lab.ui.theme.DollhouseTheme
+import com.dollhouse.lab.ui.theme.rememberToyRoomPalette
 import com.google.android.filament.Engine
 
 private enum class LabBackend(@StringRes val labelRes: Int, val filament: Engine.Backend) {
@@ -48,6 +49,7 @@ fun FilamentLabScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
     // Keep the camera across screen recreation and backend changes
     var orbit by rememberRoomOrbitCamera()
+    val palette = rememberToyRoomPalette()
 
     Scaffold(
         modifier = modifier,
@@ -77,6 +79,7 @@ fun FilamentLabScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         key(requested) {
             FilamentSurface(
                 layout = defaultRoomLayout,
+                palette = palette,
                 requestedBackend = requested.filament,
                 orbit = orbit,
                 onCameraGesture = { pan, zoom -> orbit = orbit.applyGesture(pan, zoom) },

@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
@@ -36,6 +35,7 @@ private const val GRID_STEP_METERS = 0.5f
 @Composable
 internal fun RoomPlan(
     layout: RoomLayout,
+    palette: ToyRoomPalette,
     onMoveFurniture: (id: String, centerX: Float, centerZ: Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -43,7 +43,6 @@ internal fun RoomPlan(
     val currentLayout by rememberUpdatedState(layout)
     val moveFurniture by rememberUpdatedState(onMoveFurniture)
     val paddingPx = with(LocalDensity.current) { 16.dp.toPx() }
-    val palette = ToyRoomPalette.fromResources(LocalContext.current)
     val floorColor = Color(palette.wood)
     val wallColor = Color(palette.warmWhite)
     val outlineColor = MaterialTheme.colorScheme.onSurface
@@ -97,9 +96,10 @@ internal fun RoomPlan(
                     onDragEnd = { grab = null },
                     onDragCancel = { grab = null },
                 )
-            }) {
-            val transform =
-                PlanTransform.fit(layout.width, layout.depth, size, paddingPx) ?: return@Canvas
+            }
+    ) {
+        val transform =
+            PlanTransform.fit(layout.width, layout.depth, size, paddingPx) ?: return@Canvas
 
         drawRect(
             color = floorColor,
@@ -128,14 +128,14 @@ internal fun RoomPlan(
                 topLeft = topLeft,
                 size = itemSize,
             )
-                if (item.id == selectedFurnitureId) {
-                    drawRect(
-                        color = outlineColor,
-                        topLeft = topLeft,
-                        size = itemSize,
-                        style = Stroke(width = 3.dp.toPx()),
-                    )
-                }
+            if (item.id == selectedFurnitureId) {
+                drawRect(
+                    color = outlineColor,
+                    topLeft = topLeft,
+                    size = itemSize,
+                    style = Stroke(width = 3.dp.toPx()),
+                )
+            }
 
             val label = labels.getValue(item.type)
             if (label.size.width <= itemSize.width && label.size.height <= itemSize.height) {
