@@ -57,6 +57,9 @@ class ToyRoomScene(
     private val materialInstances = mutableListOf<MaterialInstance>()
     private val furnitureParents = mutableMapOf<String, Int>()
 
+    // Last centers sent to Filament, so unchanged furniture is skipped
+    private val appliedCenters = mutableMapOf<String, Pair<Float, Float>>()
+
     private class Wall(
         val centerX: Float,
         val centerZ: Float,
@@ -130,6 +133,21 @@ class ToyRoomScene(
         }
     }
 
+    internal fun updateFurniture(furniture: List<Furniture>) {
+        val transformManager = engine.transformManager
+        for (item in furniture) {
+            val center = item.centerX to item.centerZ
+            if (appliedCenters[item.id] == center) continue
+
+            val parent = furnitureParents[item.id] ?: continue
+            transformManager.setTransform(
+                transformManager.getInstance(parent),
+                translationTransform(item.centerX, 0f, item.centerZ),
+            )
+            appliedCenters[item.id] = center
+        }
+    }
+
     private fun addWall(boxes: List<RoomBox>, outwardX: Float, outwardZ: Float) {
         // The first box is a wall segment, so its center lies on the wall's midplane
         val anchor = boxes.first()
@@ -148,6 +166,7 @@ class ToyRoomScene(
         val transformManager = engine.transformManager
         transformManager.create(parent, 0, translationTransform(item.centerX, 0f, item.centerZ))
         furnitureParents[item.id] = parent
+        appliedCenters[item.id] = item.centerX to item.centerZ
         boxes.forEach { addBox(it, parent) }
     }
 

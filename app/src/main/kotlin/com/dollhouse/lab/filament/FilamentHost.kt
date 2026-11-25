@@ -53,9 +53,16 @@ class FilamentHost<C : FilamentContent>(
     private var destroyed = false
 
     var onFrameStats: ((FrameStats?) -> Unit)? = null
+        set(value) {
+            val wasCollecting = field != null
+            field = value
+            if (wasCollecting && value == null) resetFrameStats()
+        }
+
     private var statsWindowStartNanos = 0L
     private var statsFrames = 0
-    private val frameInfos = Array(GPU_HISTORY_SIZE) { Renderer.FrameInfo() }
+    private val frameInfos by
+        lazy(LazyThreadSafetyMode.NONE) { Array(GPU_HISTORY_SIZE) { Renderer.FrameInfo() } }
 
     private val frameCallback =
         object : Choreographer.FrameCallback {
@@ -76,6 +83,7 @@ class FilamentHost<C : FilamentContent>(
         }
 
     private fun countFrame(frameTimeNanos: Long) {
+        val reportStats = onFrameStats ?: return
         if (statsWindowStartNanos == 0L) {
             statsWindowStartNanos = frameTimeNanos
             return
@@ -88,8 +96,7 @@ class FilamentHost<C : FilamentContent>(
         val fps = statsFrames * NANOS_PER_SECOND / elapsedNanos
         statsWindowStartNanos = frameTimeNanos
         statsFrames = 0
-        onFrameStats?.invoke(
-            FrameStats(fps, frameMs = MILLIS_PER_SECOND / fps, gpuMs = latestGpuMs()))
+        reportStats(FrameStats(fps, frameMs = MILLIS_PER_SECOND / fps, gpuMs = latestGpuMs()))
     }
 
     private fun latestGpuMs(): Float? {

@@ -1,8 +1,11 @@
 package com.dollhouse.lab.studio
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
@@ -20,11 +23,16 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dollhouse.lab.R
+import com.dollhouse.lab.filament.FilamentSurface
+import com.dollhouse.lab.filament.applyGesture
+import com.dollhouse.lab.filament.rememberRoomOrbitCamera
 import com.dollhouse.lab.model.RoomLayout
 import com.dollhouse.lab.model.defaultRoomLayout
+import com.google.android.filament.Engine
 
 private val RoomLayoutSaver =
     listSaver<RoomLayout, Any>(
@@ -41,6 +49,25 @@ private val RoomLayoutSaver =
 internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     var layout by
         rememberSaveable(stateSaver = RoomLayoutSaver) { mutableStateOf(defaultRoomLayout) }
+    var orbit by rememberRoomOrbitCamera()
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val panels: @Composable (Modifier) -> Unit = { panelModifier ->
+        FilamentSurface(
+            layout = layout,
+            requestedBackend = Engine.Backend.OPENGL,
+            orbit = orbit,
+            onCameraGesture = { pan, zoom -> orbit = orbit.applyGesture(pan, zoom) },
+            modifier = panelModifier,
+        )
+        RoomPlan(
+            layout = layout,
+            onMoveFurniture = { id, centerX, centerZ ->
+                layout = layout.moveFurniture(id, centerX, centerZ)
+            },
+            modifier = panelModifier,
+        )
+    }
 
     Column(modifier.fillMaxSize()) {
         TopAppBar(
@@ -54,17 +81,16 @@ internal fun RoomStudioScreen(onBack: () -> Unit, modifier: Modifier = Modifier)
                 }
             },
         )
-        RoomPlan(
-            layout = layout,
-            onMoveFurniture = { id, centerX, centerZ ->
-                layout = layout.moveFurniture(id, centerX, centerZ)
-            },
-            modifier =
-                Modifier.weight(1f)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
-        )
+        val contentModifier =
+            Modifier.weight(1f)
+                .fillMaxWidth()
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+        if (isLandscape) {
+            Row(contentModifier) { panels(Modifier.weight(1f).fillMaxHeight()) }
+        } else {
+            Column(contentModifier) { panels(Modifier.weight(1f).fillMaxWidth()) }
+        }
     }
 }
