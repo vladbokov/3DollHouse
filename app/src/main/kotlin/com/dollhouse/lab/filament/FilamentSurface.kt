@@ -33,7 +33,8 @@ import com.google.android.filament.Engine
 @Composable
 internal fun FilamentSurface(
     layout: RoomLayout,
-    requestedBackend: Engine.Backend,
+    palette: ToyRoomPalette,
+    requestedBackend: Engine.Backend = Engine.Backend.OPENGL,
     orbit: OrbitCamera,
     onCameraGesture: (Offset, Float) -> Unit,
     onActualBackend: ((Engine.Backend) -> Unit)? = null,
@@ -51,7 +52,6 @@ internal fun FilamentSurface(
 
     // Keep the Engine and scene while furniture moves
     val filamentHost = remember {
-        val palette = ToyRoomPalette.fromResources(context)
         val room = ToyRoom(layout, palette)
         FilamentHost(context, requestedBackend) { engine ->
             ToyRoomScene(
@@ -102,7 +102,8 @@ internal fun FilamentSurface(
         modifier =
             modifier.pointerInput(scene) {
                 detectTransformGestures { _, pan, zoom, _ -> handleCameraGesture(pan, zoom) }
-            }) {
-            AndroidView(factory = { filamentHost.surfaceView }, modifier = Modifier.fillMaxSize())
+            }
+    ) {
+        AndroidView(factory = { filamentHost.surfaceView }, modifier = Modifier.fillMaxSize())
     }
 }

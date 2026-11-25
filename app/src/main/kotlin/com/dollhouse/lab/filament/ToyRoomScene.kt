@@ -26,13 +26,6 @@ class ToyRoomScene(
     room: ToyRoom,
     initialOrbit: OrbitCamera,
 ) : FilamentContent {
-    init {
-        val furniture = room.layout.furniture
-        require(furniture.map { it.id }.toSet().size == furniture.size) {
-            "Furniture IDs must be unique"
-        }
-    }
-
     // Holds the room boxes, lights and background
     private val scene = engine.createScene()
 

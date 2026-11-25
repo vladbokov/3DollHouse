@@ -8,12 +8,27 @@ data class RoomLayout(
     val window: Opening,
     val furniture: List<Furniture>,
 ) {
-    internal fun furnitureAt(x: Float, z: Float): Furniture? = furniture.lastOrNull { item ->
-        val halfWidth = item.type.sizeX / 2
-        val halfDepth = item.type.sizeZ / 2
-        x in (item.centerX - halfWidth)..(item.centerX + halfWidth) &&
-            z in (item.centerZ - halfDepth)..(item.centerZ + halfDepth)
+    init {
+        require(listOf(width, depth, height).all { it.isFinite() && it > 0f }) {
+            "Room size must be positive"
+        }
+        require(door.fitsWall(width, height)) { "Door must fit inside the wall" }
+        require(window.fitsWall(width, height)) { "Window must fit inside the wall" }
+        require(furniture.map { it.id }.toSet().size == furniture.size) {
+            "Furniture IDs must be unique"
+        }
+        require(furniture.all { it.isInside(width, depth) }) {
+            "Furniture must stay inside the room"
+        }
     }
+
+    internal fun furnitureAt(x: Float, z: Float): Furniture? =
+        furniture.lastOrNull { item ->
+            val halfWidth = item.type.sizeX / 2
+            val halfDepth = item.type.sizeZ / 2
+            x in (item.centerX - halfWidth)..(item.centerX + halfWidth) &&
+                z in (item.centerZ - halfDepth)..(item.centerZ + halfDepth)
+        }
 
     internal fun moveFurniture(id: String, centerX: Float, centerZ: Float): RoomLayout {
         val index = furniture.indexOfFirst { it.id == id }
@@ -30,6 +45,21 @@ data class RoomLayout(
         return copy(furniture = furniture.toMutableList().apply { this[index] = moved })
     }
 }
+
+private fun Opening.fitsWall(wallWidth: Float, wallHeight: Float): Boolean =
+    listOf(minX, minY, width, height).all { it.isFinite() } &&
+        width > 0f &&
+        height > 0f &&
+        minX >= 0f &&
+        minY >= 0f &&
+        minX + width <= wallWidth &&
+        minY + height <= wallHeight
+
+private fun Furniture.isInside(roomWidth: Float, roomDepth: Float): Boolean =
+    centerX.isFinite() &&
+        centerZ.isFinite() &&
+        clampCenter(centerX, type.sizeX, roomWidth) == centerX &&
+        clampCenter(centerZ, type.sizeZ, roomDepth) == centerZ
 
 private fun clampCenter(center: Float, itemSize: Float, roomSize: Float): Float {
     val halfSize = itemSize / 2
